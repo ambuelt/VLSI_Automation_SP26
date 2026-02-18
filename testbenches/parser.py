@@ -7,19 +7,17 @@ import re
 from collections import defaultdict
 
 class Node:
-    def __init__(self, gate_name, gate_type=None):
-        """
-        Docstring for __init__
-        
-        :param self: Description
-        :param gate_name: Description
-        :param gate_type: Description
-        """
-        self.name = gate_name
-        self.type = gate_type
-        self.fanin = []
-        self.fanout = []
-
+    def __init__(self):
+        self.name = ""
+        self.outname = ""
+        self.Cload = 0.0
+        self.inputs = [] #list of handles to the fanin nodes of this node
+        self.outputs =[] #list of handles to the fanout nodes of this node
+        self.Tau_in = [] # array/list of input slews (for all inputs to the gate), to be used for STA
+        self.inp_arrival = [] # array/list of input arrival times for input transitions (ignore rise or fall)
+        self.outp_arrival = [] # array/list of output arrival times,outp_arrival = inp_arrival + cell_delay
+        self.max_out_arrival = 0.0 # arrival time at the output of this gate using max on (inp_arrival + cell_delay)
+        self.Tau_out = 0.0 # Resulting output slew
 class LUT:
     def __init__(self):
         """
@@ -320,6 +318,7 @@ if __name__ == '__main__':
 
         else:
             print(f'Error: NLDM file not found - {args.read_nldm}')
+
 
 
 
