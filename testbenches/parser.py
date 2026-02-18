@@ -6,6 +6,7 @@ import numpy as np
 import re
 from collections import defaultdict
 
+
 class Node:
     def __init__(self):
         self.name = ""
@@ -18,6 +19,33 @@ class Node:
         self.outp_arrival = [] # array/list of output arrival times,outp_arrival = inp_arrival + cell_delay
         self.max_out_arrival = 0.0 # arrival time at the output of this gate using max on (inp_arrival + cell_delay)
         self.Tau_out = 0.0 # Resulting output slew
+
+
+#class Node:
+#    def __init__(self, gate_name, gate_type=None):
+#        """
+#        Docstring for __init__
+#        
+#        :param self: Description
+#        :param gate_name: Description
+#        :param gate_type: Description
+#        """
+#        self.name = gate_name
+#        self.type = gate_type
+#        self.fanin = []
+#        self.fanout = []
+#
+#class LUT:
+#    def __init__(self):
+#        """
+#        Docstring for __init__
+#        
+#        :param self: Description
+#        :param gate_name: Description
+#        :param gate_type: Description
+#        """
+#        self.all_gate_names = 1
+
 class LUT:
     def __init__(self):
         self.Allgate_name = [] #all cells defined in the LUT
@@ -26,11 +54,113 @@ class LUT:
         self.Cload_vals = np.array([])#1D numpy array corresponds to the 2nd index in the LUT
         self.Tau_in_vals = np.array([])#1D numpy array corresponds to the 1st index in the LUT
     
-    def assign_arrays(self, NLDM_file):
-        
-        # define the arrays to be used during STA call later
-        # also helps to simply assign the arrays so that a call to this function will fetch the arrays,
-        # and you can easily print out the details of this NLDM
+    
+    def write_nldm_output(self, delay_or_slew, cells, output_file):
+        """
+        Prints the output .txt file
+
+        :param mode: Description
+        :param output_file: Description
+        """
+
+        # Open output nldm file for writing line by line
+        with open(output_file, 'w') as nldm_file:
+            for cell_name, cell_data in cells.items():
+                nldm_file.write(f'cell: {cell_name} \n')
+
+                output_time = cell_data[delay_or_slew]
+
+                slews = ','.join(map(str, output_time['index_1']) + "\n")
+                caps = ','.join(map(str, output_time['index_2']) + "\n")
+
+                nldm_file.write(f'input slews: {slews}')
+                nldm_file.write(f'load cap: {caps}')
+
+                for row in output_time['delay_or_slew']:
+                    times = ','.join(map(str, row) + "; \n")
+                    nldm_file.write(f'{delay_or_slew}: {times}')
+
+
+    def assign_arrays(self, all_time_values):
+        """
+        """
+        # Finds
+        index_1 = re.findall(r'index_1\s*\(  (.*?)  \)', all_time_values)
+        index_2 = re.findall(r'index_2\s*\(   (.*?) \)', all_time_values)
+
+        # '\\\\' is the re for '\' seperation
+        for line in all_time_values:
+            print(line)
+            time_values = re.findall(r'values\s*\( (.*?) \\\\ \)', line, re.S)
+
+
+    def parse_nldm(self, file, delay_or_slew):
+        """
+        Docstring for parse_nldm
+
+        :param file: nldm .library file
+        :param delay_or_slew: Determines whether the command line prompt wants to calculate delay or slew
+        """
+
+        cells = {}
+
+        with open(file, 'r') as lib_file:
+            file_txt = lib_file.read()  # Reads entire file to then edit off of
+
+
+            # GRab each cell block of code from .lib file
+            # re.S used to match newlines for multi-line txt
+            # Gives list of tuples of (cell_name, txt inside {})
+            # Ignores everything until it sees the word cell
+            cell_data = re.findall(r'cell\s*\( (.*?) \) \s*\{ (.*?)\n \s*\}', file_txt, re.S)
+
+            for cell_name, data in cell_data:
+                cell_values = {} # Creates dictionary to store input cap, delay, and slew values
+
+                # Finds all values contained in paratheses and splits all inputs seperated by commas to get a list ['n1', 'n2', 'n3',...]
+                c_name = re.findall(r'\((.*?)\)', cell_name)[0]
+
+                # Grabs decimal number values and '.' for float number
+                cap_value = re.search(r'capacitance \s*: \s*([\d\.]+)', data)
+
+                # Finds all values and arrary and txt within the cell_delay {} and output_slew {} brackets
+                delay_value = re.search(r'cell_delay.*? \{ (.*?) \}', data, re.S)
+                slew_value = re.search(r'output_slew.*? \{ (.*?) \}', data, re.S)
+
+                # If the capacitance text is found, add to cell_value dict
+                if cap_value:
+                    cell_values['capacitance'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
+
+                # If the delay text is found, add to cell_value dict
+                if delay_value:
+                    cell_values['delay'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
+
+                    ## NEED TO ADD THE WAY TO FIND THE VALUES IN THE 2D ARRARY!!!!
+                    self.assign_arrays(cell_values['delay'])
+
+
+
+
+
+                # If the slew text is found, add to cell_value dict
+                if slew_value:
+                    cell_values['slew'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
+
+                    ## NEED TO ADD THE WAY TO FIND THE VALUES IN THE 2D ARRARY!!!!
+                    self.assign_arrays(cell_values['slews'])
+
+
+
+        # Write all values to .txt file
+        if (delay_or_slew == 'delays'):
+            output_filename = 'delay_LUT.txt'
+        elif (delay_or_slew == 'slews'):
+            output_filename = 'slew_LUT.txt'
+        else:
+            print(f'Something went wrong???')
+            exit(1)
+
+        self.write_nldm_output(delay_or_slew, cells, output_filename)
 
 def connect_inputs(input_wires, ckt_inputs, nodes: dict) -> Node:
     """
@@ -197,88 +327,7 @@ def parse_bench(file):
     write_ckt_output(inputs, outputs, gate_counter, nodes, output_filename)
 
 
-def write_nldm_output(delay_or_slew, cells, output_file='ckt_details.txt'):
-    """
-    Docstring for write_nldm_output
-    
-    :param mode: Description
-    :param output_file: Description
-    """
 
-    # Open output nldm file for writing line by line
-    with open(output_file, 'w') as nldm_file:
-        for cell_name, cell_data in cells.items():
-            nldm_file.write(f'cell: {cell_name} \n')
-            
-            output_time = cell_data[delay_or_slew]
-
-            slews = ','.join(map(str, output_time['index_1']) + "\n")
-            caps = ','.join(map(str, output_time['index_2']) + "\n")
-
-            nldm_file.write(f'input slews: {slews}')
-            nldm_file.write(f'load cap: {caps}')
-
-            for row in output_time['delay_or_slew']:
-                times = ','.join(map(str, row) + "; \n")
-                nldm_file.write(f'{delay_or_slew}: {times}')
-
-
-def parse_nldm(file, delay_or_slew):
-    """
-    Docstring for parse_nldm
-    
-    :param file: nldm .library file
-    :param delay_or_slew: Determines whether the command line prompt wants to calculate delay or slew
-    """
-
-    cells = {}
-
-    with open(file, 'r') as lib_file:
-        file_txt = lib_file.read()  # Reads entire file to then edit off of
-
-
-        # GRab each cell block of code from .lib file
-        # re.S used to match newlines for multi-line txt
-        # Gives list of tuples of (cell_name, txt inside {})
-        cell_data = re.findall(r'cell\s*\( (.*?) \) \s*\{ (.*?)\n \s*\}', file_txt, re.S)
-
-        for cell_name, data in cell_data:
-            cell_values = {} # Creates dictionary to store input cap, delay, and slew values
-
-            # Finds all values contained in paratheses and splits all inputs seperated by commas to get a list ['n1', 'n2', 'n3',...]
-            c_name = re.findall(r'\((.*?)\)', cell_name)[0]
-
-            # Grabs decimal number values and '.' for float number
-            cap_value = re.search(r'capacitance \s*: \s*([\d\.]+)', data)
-            delay_value = re.search(r'cell_delay.*? \{ (.*?) \}', data, re.S)
-            slew_value = re.search(r'output_slew.*? \{ (.*?) \}', data, re.S)
-            
-            # If the capacitance text is found, add to cell_value dict
-            if cap_value:
-                cell_values['capacitance'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
-
-            # If the delay text is found, add to cell_value dict
-            if delay_value:
-                cell_values['delay'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
-
-                ## NEED TO ADD THE WAY TO FIND THE VALUES IN THE 2D ARRARY!!!!
-
-            # If the slew text is found, add to cell_value dict
-            if slew_value:
-                cell_values['slew'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
-
-                ## NEED TO ADD THE WAY TO FIND THE VALUES IN THE 2D ARRARY!!!!
-
-    # Write all values to .txt file
-    if (delay_or_slew == 'delays'):
-        output_filename = 'delay_LUT.txt'
-    elif (delay_or_slew == 'slews'):
-        output_filename = 'slew_LUT.txt'
-    else:
-        print(f'Something went wrong???')
-        exit(1)
-    
-    write_nldm_output(delay_or_slew, cells, output_filename)
 
 
 
@@ -313,16 +362,14 @@ if __name__ == '__main__':
         if args.read_nldm.is_file():
             lut = LUT()
             if args.delays:
-                parse_nldm(args.read_nldm, args.delays) # Calls function to parse .lib file for delays
+                lut.parse_nldm(args.read_nldm, args.delays) # Calls function to parse .lib file for delays
             elif args.slews:
-                parse_nldm(args.read_nldm, args.slews)  # Calls function to parse .lib file for slews
+                lut.parse_nldm(args.read_nldm, args.slews)  # Calls function to parse .lib file for slews
             else:
                 print(f'Error: Specify --delays or --slews when using - {args.read_nldm}')
 
         else:
             print(f'Error: NLDM file not found - {args.read_nldm}')
 
-
-
-
+    
 
