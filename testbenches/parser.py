@@ -20,14 +20,17 @@ class Node:
         self.Tau_out = 0.0 # Resulting output slew
 class LUT:
     def __init__(self):
-        """
-        Docstring for __init__
+        self.Allgate_name = [] #all cells defined in the LUT
+        self.All_delays = np.array([]) #2D numpy array delay LUTs for each cell
+        self.All_slews = np.array([])#2D numpy array to store output slew LUTs for each cell
+        self.Cload_vals = np.array([])#1D numpy array corresponds to the 2nd index in the LUT
+        self.Tau_in_vals = np.array([])#1D numpy array corresponds to the 1st index in the LUT
+    
+    def assign_arrays(self, NLDM_file):
         
-        :param self: Description
-        :param gate_name: Description
-        :param gate_type: Description
-        """
-        self.all_gate_names = 1
+        # define the arrays to be used during STA call later
+        # also helps to simply assign the arrays so that a call to this function will fetch the arrays,
+        # and you can easily print out the details of this NLDM
 
 def connect_inputs(input_wires, ckt_inputs, nodes: dict) -> Node:
     """
@@ -318,6 +321,7 @@ if __name__ == '__main__':
 
         else:
             print(f'Error: NLDM file not found - {args.read_nldm}')
+
 
 
 
