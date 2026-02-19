@@ -10,12 +10,13 @@ import sys
 
 
 class Node:
-    def __init__(self):
-        self.name = ""
-        self.outname = ""
+    def __init__(self, gate_name, gate_type=None):
+        self.name = gate_name
+        self.outname = gate_type
         self.Cload = 0.0
         self.inputs = [] #list of handles to the fanin nodes of this node
         self.outputs =[] #list of handles to the fanout nodes of this node
+
         self.Tau_in = [] # array/list of input slews (for all inputs to the gate), to be used for STA
         self.inp_arrival = [] # array/list of input arrival times for input transitions (ignore rise or fall)
         self.outp_arrival = [] # array/list of output arrival times,outp_arrival = inp_arrival + cell_delay
@@ -329,6 +330,7 @@ def parse_bench(file):
             # Finds the \d+ decimal value character  connected to the enclosed ()
             if line.startswith('INPUT'):
                 input_wire = re.findall(r'\((\d+)\)', line)[0]
+                print(f'input_wire {input_wire}')
                 inputs.append(input_wire)
 
                 input_name = f'INPUT-{input_wire}'
@@ -341,8 +343,11 @@ def parse_bench(file):
                 else:
                     input_node = nodes[input_name]
 
+                print(f'input_node {vars(input_node)}')
+
             elif line.startswith('OUTPUT'):
                 output_wire = re.findall(r'\((\d+)\)', line)[0]
+                print(f'output_wire {output_wire}')
                 outputs.append(output_wire)
 
             elif ('=') in line:
@@ -350,12 +355,15 @@ def parse_bench(file):
                 output_wire_name = gate_name.strip()
 
                 # Finds the \w+ word character instance connected to the initial ( ex. 'name('
-                gate_type = re.findall(r'(\w+)\()', gate)[0]
+                gate_type = re.findall(r'(\w+)\(', gate)
+                print(f'gate type {gate_type}')
 
                 # Finds all values contained in paratheses and splits all inputs seperated by commas to get a list ['n1', 'n2', 'n3',...]
                 input_wires = re.findall(r'\((.*?)\)', gate)[0].split(',')
+                print(f'input_wires {input_wires}')
 
                 gate_name = f'{gate_type}-{output_wire_name}'
+                print(f'gate name {gate_name}')
 
                 # Checks to see if node has already been created, if not, adds it to netlist
                 if gate_name not in nodes:
@@ -363,6 +371,8 @@ def parse_bench(file):
                     node = nodes[gate_name]
                 else:
                     node = nodes[gate_name]
+
+                print(f'node {vars(node)}')
 
                 # Increment the number of gates of that type by 1
                 gate_counter[gate_type] = +1
