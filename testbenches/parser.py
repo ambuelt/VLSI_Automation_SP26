@@ -6,6 +6,8 @@ import numpy as np
 import re
 from collections import defaultdict
 
+import sys
+
 
 class Node:
     def __init__(self):
@@ -65,7 +67,12 @@ class LUT:
 
         # Open output nldm file for writing line by line
         with open(output_file, 'w') as nldm_file:
+
+            print('I got here!!!')
+            print(cells)
             for cell_name, cell_data in cells.items():
+                print(f'cell_name: {cell_name}')
+                print(f'cell_data: {cell_data}')
                 nldm_file.write(f'cell: {cell_name} \n')
 
                 output_time = cell_data[delay_or_slew]
@@ -91,7 +98,7 @@ class LUT:
         # '\\\\' is the re for '\' seperation
         for line in all_time_values:
             print(line)
-            time_values = re.findall(r'values\s*\( (.*?) \\\\ \)', line, re.S)
+            time_values = re.findall(r'values\s*\( (.*?) \n \)', line, re.S)
 
 
     def parse_nldm(self, file, delay_or_slew):
@@ -107,14 +114,65 @@ class LUT:
         with open(file, 'r') as lib_file:
             file_txt = lib_file.read()  # Reads entire file to then edit off of
 
+            #print(file_txt)
+
 
             # GRab each cell block of code from .lib file
             # re.S used to match newlines for multi-line txt
             # Gives list of tuples of (cell_name, txt inside {})
             # Ignores everything until it sees the word cell
-            cell_data = re.findall(r'cell\s*\( (.*?) \) \s*\{ (.*?)\n \s*\}', file_txt, re.S)
+            #cell_data = re.findall(r'cell \s*\( (.*?) \) \s*\{ (.*?) \n \s*\}', file_txt, re.S)
+            
+            #cell_data = re.search(r"cell \s*\( (.*?) \) \s*\{ (.*?) \n \s*\}(\s*\})?", file_txt, re.S)
+            #cell_data = re.search(r"cell\s*\(\s*\w+", file_txt, re.S)
+            #cell_data = re.search(r"cell\s*\(\s*(.*?)\)", file_txt, re.S)
+            
+            cell_name = re.findall(r"cell\s*\(\s*(.*?)\)\s*\{(.*?)\n\s*\}", file_txt, re.S) # worked up until the delay values
+            
+            
+            cell_delays = re.findall(r"cell_delay\s*\(\s*(.*?)\)\s*\{(.*?)\n\s*\}", file_txt, re.S) # worked up until the delay values
 
-            for cell_name, data in cell_data:
+
+            cell_slews = re.findall(r"output_slew\s*\(\s*(.*?)\)\s*\{(.*?)\n\s*\}", file_txt, re.S) # works to grab just the output slews
+
+            # Grabs decimal number values and '.' for float number
+            #cap_value = re.findall(r'capacitance\s*:\s*(.*?)', cell_name)
+#
+            ## Finds all values and arrary and txt within the cell_delay {} and output_slew {} brackets
+            #delay_value = re.search(r'cell_delay.*?\{(.*?)\}', cell_delays, re.S)
+            #slew_value = re.search(r'output_slew.*?\{(.*?)\}', cell_slews, re.S)
+
+            print(f'name: {cell_name}')
+            print(f'delay: {cell_delays}')
+            print(f'slew: {cell_slews}\n\n')
+
+            index_1 = re.findall(r'index_1\s*\((.*?)\)', cell_delays[1])
+            index_2 = re.findall(r'index_2\s*\((.*?)\)', cell_delays[1])
+            time_values = re.findall(r'values\s*\((.*?)\n', data, re.S) # Has the entire list and will need to 
+
+            print(f'index_1: {index_1}')
+            print(f'index_2: {index_2}')
+            print(f'time: {time_values}')
+
+            index_1 = re.findall(r'index_1\s*\((.*?)\)', data)
+
+
+            # '\\\\' is the re for '\' seperation
+            for cell, data in cell_delays:
+                print(f'cell: {cell}')
+                print(f'data: {data}')
+
+                # Finds
+                index_1 = re.findall(r'index_1\s*\((.*?)\)', data)
+                index_2 = re.findall(r'index_2\s*\((.*?)\)', data)
+                time_values = re.findall(r'values\s*\((.*?)\n', data, re.S) # Has the entire list and will need to 
+
+
+                print(f'index_1: {index_1}')
+                print(f'index_2: {index_2}')
+                print(f'time: {time_values}')
+
+            for cell_name, data in cell_slews:
                 cell_values = {} # Creates dictionary to store input cap, delay, and slew values
 
                 # Finds all values contained in paratheses and splits all inputs seperated by commas to get a list ['n1', 'n2', 'n3',...]
@@ -152,7 +210,8 @@ class LUT:
 
 
         # Write all values to .txt file
-        if (delay_or_slew == 'delays'):
+        #if (delay_or_slew == 'delays'):
+        if delay_or_slew:
             output_filename = 'delay_LUT.txt'
         elif (delay_or_slew == 'slews'):
             output_filename = 'slew_LUT.txt'
@@ -231,7 +290,7 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
                 fanout_values.append(n.name)
 
             # Write all fanout node pairs and use .join concatinate all output node names
-            ckt_file.write(f'{node.name}: {','.join(fanout_values)}\n')
+            ckt_file.write(f'{node.name}:' + ','.join(fanout_values) + '\n')
 
 
         # Fanin of specific gates
@@ -245,7 +304,7 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
                 fanin_values.append(n.name)
 
             # Write all fanout node pairs and use .join concatinate all input node names
-            ckt_file.write(f'{node.name}: {','.join(fanin_values)}\n')
+            ckt_file.write(f'{node.name}:' + ','.join(fanout_values) + '\n')
 
 
 
@@ -276,7 +335,7 @@ def parse_bench(file):
 
                 # Create INPUT nodes for starting gates
                 # Checks to see if node has already been created, if not, adds it to netlist
-                if gate_name not in nodes:
+                if input_name not in nodes:
                     nodes[input_name] = Node(input_name, 'INPUT')
                     input_node = nodes[input_name]
                 else:
@@ -334,14 +393,14 @@ def parse_bench(file):
 
 # Main parser logic
 if __name__ == '__main__':
-    parser = argparse.ArguementParser(
+    parser = argparse.ArgumentParser(
                             description='STA program to read circuit and nldm library files')
 
     parser.add_argument('--read_ckt', type=pathlib.Path, help='Create path to ckt.bench file')
 
     # Add arguments to created line command
-    # python3.7 parser_sta.py -- delays -- read_nldm sample_NLDM.lib
-    # python3.7 parser_sta.py -- slews -- read_nldm sample_NLDM.lib
+    # python3.7 parser_sta.py --delays --read_nldm sample_NLDM.lib
+    # python3.7 parser_sta.py --slews --read_nldm sample_NLDM.lib
     parser.add_argument('--read_nldm', type=pathlib.Path, help='Create path to nldm .library file')
     parser.add_argument('--delays', action='store_true', help='Solves for delays in nldm file')
     parser.add_argument('--slews', action='store_true', help='Solves for output slews in nldm file')
@@ -362,6 +421,7 @@ if __name__ == '__main__':
         if args.read_nldm.is_file():
             lut = LUT()
             if args.delays:
+                print(args.read_nldm)
                 lut.parse_nldm(args.read_nldm, args.delays) # Calls function to parse .lib file for delays
             elif args.slews:
                 lut.parse_nldm(args.read_nldm, args.slews)  # Calls function to parse .lib file for slews
@@ -370,6 +430,15 @@ if __name__ == '__main__':
 
         else:
             print(f'Error: NLDM file not found - {args.read_nldm}')
+
+    
+    #lut = LUT()
+    #if args.delays:
+    #    lut.parse_nldm(args.read_nldm, args.delays) # Calls function to parse .lib file for delays
+    #elif args.slews:
+    #    lut.parse_nldm(args.read_nldm, args.slews)  # Calls function to parse .lib file for slews
+    #else:
+    #    print(f'Error: Specify --delays or --slews when using - {args.read_nldm}')
 
     
 
