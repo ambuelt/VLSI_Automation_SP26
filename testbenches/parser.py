@@ -12,10 +12,10 @@ import sys
 class Node:
     def __init__(self, gate_name, gate_type=None):
         self.name = gate_name
-        self.outname = gate_type
+        self.gate_type = gate_type
         self.Cload = 0.0
-        self.inputs = [] #list of handles to the fanin nodes of this node
-        self.outputs =[] #list of handles to the fanout nodes of this node
+        self.fanin = [] #list of handles to the fanin nodes of this node
+        self.fanout =[] #list of handles to the fanout nodes of this node
 
         self.Tau_in = [] # array/list of input slews (for all inputs to the gate), to be used for STA
         self.inp_arrival = [] # array/list of input arrival times for input transitions (ignore rise or fall)
@@ -222,7 +222,7 @@ class LUT:
 
         self.write_nldm_output(delay_or_slew, cells, output_filename)
 
-def connect_inputs(input_wires, ckt_inputs, nodes: dict) -> Node:
+def connect_inputs(input_wires, ckt_inputs, node, nodes: dict):
     """
     Docstring for connect_inputs
     
@@ -233,15 +233,25 @@ def connect_inputs(input_wires, ckt_inputs, nodes: dict) -> Node:
     :return: Description
     :rtype: Node
     """
+
+    # Append all inputs for that node into a list
+    input_nodes = []
+
+
     for input in input_wires:
         input = input.strip()
+        print(f'\nconnect_input - {input}\n')
 
         if input in ckt_inputs:
             input_node = nodes[f'INPUT-{input}']
         else:
-            input_node = Node(input)
+            for n in nodes.values():
+                if n.name.endswith(f'-{input}'):
+                    input_node = n
 
-    return input_node
+        # Add all fanin and fanouts to circuit
+        node.fanin.append(input_node.name)
+        input_node.fanout.append(node.name)
 
 
 def connect_outputs(output_wires, nodes: dict):
@@ -260,10 +270,14 @@ def connect_outputs(output_wires, nodes: dict):
             # If output is only connected to a number, replace it with OUTPUT-that number
             if node.name.endswith(f'-{output}'):
                 output_node = Node(f'OUTPUT-{output}', 'OUTPUT') # Creates new OUTPUT node type
-                node.fanout.append(output_node)
+                
+                node.fanout.append(output_node.name)
+                output_node.fanin.append(node.name)
 
 
 
+
+# Officially works!!!!!!!
 def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='ckt_details.txt'):
     """
     Docstring for write_ckt_output
@@ -273,39 +287,43 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
 
     # Open output circuit file for writing line by line
     with open(output_file, 'w') as ckt_file:
-        ckt_file.write(f'{len(ckt_inputs)} primary inputs')
-        ckt_file.write(f'{len(ckt_outputs)} primary outputs')
+        ckt_file.write(f'{len(ckt_inputs)} primary inputs\n')
+        ckt_file.write(f'{len(ckt_outputs)} primary outputs\n')
 
         # Iterate through gate types to print all gate values per type
         for gate_type, count in gate_counter.items():
             ckt_file.write(f'{count} {gate_type} gates\n')
 
         # Fanout of specific gates
-        ckt_file.write('Fanout...\n')
+        ckt_file.write('\nFanout...\n')
         # Iterate through all node values
         for node in nodes.values():
-            fanout_values = []
+            if not (node.gate_type == 'INPUT'):
+                fanout_values = []
 
-            # Iterate through all fanout values
-            for n in node.fanout:
-                fanout_values.append(n.name)
+                # Iterate through all fanout values
+                for n in node.fanout:
+                    fanout_values.append(n)
+                    print(f'fanout: {fanout_values}')
 
-            # Write all fanout node pairs and use .join concatinate all output node names
-            ckt_file.write(f'{node.name}:' + ','.join(fanout_values) + '\n')
+                # Write all fanout node pairs and use .join concatinate all output node names
+                ckt_file.write(f'{node.name}: ' + ', '.join(fanout_values) + '\n')
 
 
         # Fanin of specific gates
-        ckt_file.write('Fanin...\n')
+        ckt_file.write('\nFanin...\n')
         # Iterate through all node values
         for node in nodes.values():
-            fanin_values = []
+            if not (node.gate_type == 'INPUT'):
+                fanin_values = []
 
-            # Iterate through all fanout values
-            for n in node.fanin:
-                fanin_values.append(n.name)
+                # Iterate through all fanout values
+                for n in node.fanin:
+                    fanin_values.append(n)
+                    print(f'fanin: {fanin_values}')
 
-            # Write all fanout node pairs and use .join concatinate all input node names
-            ckt_file.write(f'{node.name}:' + ','.join(fanout_values) + '\n')
+                # Write all fanout node pairs and use .join concatinate all input node names
+                ckt_file.write(f'{node.name}: ' + ', '.join(fanin_values) + '\n')
 
 
 
@@ -355,7 +373,7 @@ def parse_bench(file):
                 output_wire_name = gate_name.strip()
 
                 # Finds the \w+ word character instance connected to the initial ( ex. 'name('
-                gate_type = re.findall(r'(\w+)\(', gate)
+                gate_type = re.findall(r'(\w+)\(', gate)[0]
                 print(f'gate type {gate_type}')
 
                 # Finds all values contained in paratheses and splits all inputs seperated by commas to get a list ['n1', 'n2', 'n3',...]
@@ -375,14 +393,19 @@ def parse_bench(file):
                 print(f'node {vars(node)}')
 
                 # Increment the number of gates of that type by 1
-                gate_counter[gate_type] = +1
+                gate_counter[gate_type] += 1
+
+                print(gate_counter)
 
                 # Connect gate inputs
-                input_node = connect_inputs(input_wires, inputs, nodes)
+                connect_inputs(input_wires, inputs, node, nodes)
 
                 # Add all fanin and fanouts to circuit
-                node.fanin.append(input_node)
-                input_node.fanout.append(node)
+                #node.fanin.append(input_values)
+                #input_node.fanout.append(node.name)
+
+                #print(f'after connected input node name {vars(node)}')
+                #print(f'connected input node name {vars(input_node)}')
 
 
             else:
