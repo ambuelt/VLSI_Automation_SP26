@@ -2,7 +2,7 @@
 Repository to hold mini project 1 for EEE598 - VLSI Automation class
 
 This mini-project 1 will parse the test benches and nldm library files (phase 1) and 
-calculate the delay and slew from traversing through the circuit (phase 2).\
+calculate the delay and slew from traversing through the circuit (phase 2).\\
 
 
 **Instructions for Running Python Code**
@@ -23,7 +23,7 @@ python3.7 parser.py --read_ckt b15.bench
 
 python3.7 parser.py --delays --read_nldm sample_NLDM.lib
 
-python3.7 parser.py --slews --read_nldm sample_NLDM.lib\
+python3.7 parser.py --slews --read_nldm sample_NLDM.lib\\
 
 
 **All Files + Folders and their description**
@@ -35,7 +35,7 @@ python3.7 parser.py --slews --read_nldm sample_NLDM.lib\
 |b15.bench                  |                 - Largest circuit test bench |
 |c17.bench                  |                 - Smallest circuit test bench |
 |c7552.bench                |                 - Mid-size circuit test bench |
-|sample_NLDM.lib            |                 - Library file holding the different types of cells and their delay, cap, and slew values |\
+|sample_NLDM.lib            |                 - Library file holding the different types of cells and their delay, cap, and slew values |\\
 
 
 *All of the following is not needed for running this assignment*
