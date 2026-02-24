@@ -27,7 +27,6 @@ python3.7 parser.py --slews --read_nldm sample_NLDM.lib
 <br>
 
 **All Files + Folders and their description**
-
 |Filename:                  |                 Description:  |
 |           :---            |              :---             |
 |parser.py                  |                 - Acts as the main python file with Node and LUT classes to parse and print the different .txt outputs |
@@ -39,8 +38,7 @@ python3.7 parser.py --slews --read_nldm sample_NLDM.lib
   
 <br>
 
-*All of the following is not needed for running this assignment*
-
+*All of the following is not needed for running this assignment in terminal*
 |Filename:                         |         Description:  |
 |           :---                   |           :---        |
 |.gitignore                        |        - automatically generated when making the repository |
