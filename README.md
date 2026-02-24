@@ -3,7 +3,8 @@ Repository to hold mini project 1 for EEE598 - VLSI Automation class
 
 This mini-project 1 will parse the test benches and nldm library files (phase 1) and 
 calculate the delay and slew from traversing through the circuit (phase 2).
-  
+
+<br>
 
 **Instructions for Running Python Code**
 
