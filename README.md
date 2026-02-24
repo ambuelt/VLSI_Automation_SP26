@@ -8,21 +8,21 @@ calculate the delay and slew from traversing through the circuit (phase 2).
 
 **Instructions for Running Python Code** - *Setting up virtual env and packages*
 
-python3.7 -m venv .myenv
+python3 -m venv .myenv
 
 source .myenv/bin/activate
 
 pip3 install -r requirements.txt
 
-python3.7 parser.py --read_ckt c17.bench
+python3 parser.py --read_ckt c17.bench
 
-python3.7 parser.py --read_ckt c7552.bench
+python3 parser.py --read_ckt c7552.bench
 
-python3.7 parser.py --read_ckt b15.bench
+python3 parser.py --read_ckt b15.bench
 
-python3.7 parser.py --delays --read_nldm sample_NLDM.lib
+python3 parser.py --delays --read_nldm sample_NLDM.lib
 
-python3.7 parser.py --slews --read_nldm sample_NLDM.lib
+python3 parser.py --slews --read_nldm sample_NLDM.lib
 
 <br>
 
