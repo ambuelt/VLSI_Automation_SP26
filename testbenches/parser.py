@@ -1,4 +1,12 @@
-# Parser File to Read circuits
+################################################################################
+# Assignment : Mini-Project 1 - Phase 1                                        #
+# Team: Ctrl Freaks                                                            #
+# ---------------------------------------------------------------------------  #
+#                                                                              #
+# Parser File to Read circuits using Node class and NLDM library files         #
+# using LUT class to generate the netlist and get gate info into txt files     #
+# to traverse the circuit and calculate delays and critical path.              #
+################################################################################
 
 import argparse
 import pathlib
@@ -6,213 +14,249 @@ import numpy as np
 import re
 from collections import defaultdict
 
-import sys
-
 
 class Node:
     def __init__(self, gate_name, gate_type=None):
-        self.name = gate_name
-        self.gate_type = gate_type
-        self.Cload = 0.0
-        self.fanin = [] #list of handles to the fanin nodes of this node
-        self.fanout =[] #list of handles to the fanout nodes of this node
+        """
+        Creates a class NODE to represent the different verticies in the circuit
+        
+        :param self: Used to call local variables of class NODE
+        :param gate_name: Represents the name of the input/output of a node
+        :param gate_type: Represents the type of logic gate in the circit
+        """
+        self.name = gate_name      # Gives the name with the gate_type and coresponding number
+        self.gate_type = gate_type # Specifes the gate function (ex. INPUT, NOR, INV, NAND)
 
-        self.Tau_in = [] # array/list of input slews (for all inputs to the gate), to be used for STA
-        self.inp_arrival = [] # array/list of input arrival times for input transitions (ignore rise or fall)
-        self.outp_arrival = [] # array/list of output arrival times,outp_arrival = inp_arrival + cell_delay
+        self.Cload = 0.0           # Gives input capacitance of the gate
+
+        self.fanin = []            # list of handles to the fanin nodes of this node
+        self.fanout =[]            # list of handles to the fanout nodes of this node
+
+        self.Tau_in = []           # array/list of input slews (for all inputs to the gate), to be used for STA
+        self.inp_arrival = []      # array/list of input arrival times for input transitions (ignore rise or fall)
+        self.outp_arrival = []     # array/list of output arrival times,outp_arrival = inp_arrival + cell_delay
         self.max_out_arrival = 0.0 # arrival time at the output of this gate using max on (inp_arrival + cell_delay)
-        self.Tau_out = 0.0 # Resulting output slew
-
-
-#class Node:
-#    def __init__(self, gate_name, gate_type=None):
-#        """
-#        Docstring for __init__
-#        
-#        :param self: Description
-#        :param gate_name: Description
-#        :param gate_type: Description
-#        """
-#        self.name = gate_name
-#        self.type = gate_type
-#        self.fanin = []
-#        self.fanout = []
-#
-#class LUT:
-#    def __init__(self):
-#        """
-#        Docstring for __init__
-#        
-#        :param self: Description
-#        :param gate_name: Description
-#        :param gate_type: Description
-#        """
-#        self.all_gate_names = 1
+        self.Tau_out = 0.0         # Resulting output slew
 
 class LUT:
     def __init__(self):
-        self.Allgate_name = [] #all cells defined in the LUT
-        self.All_delays = np.array([]) #2D numpy array delay LUTs for each cell
-        self.All_slews = np.array([])#2D numpy array to store output slew LUTs for each cell
-        self.Cload_vals = np.array([])#1D numpy array corresponds to the 2nd index in the LUT
-        self.Tau_in_vals = np.array([])#1D numpy array corresponds to the 1st index in the LUT
-    
-    
-    def write_nldm_output(self, delay_or_slew, cells, output_file):
         """
-        Prints the output .txt file
+        Creates a class LUT to represent the different cells in the nldm library file
+        
+        :param self: Used to call local variables of class LUT
+        """
+        self.full_cell = {}             # Dictionary to store all cells based on name with a nested dictionary to hold all the values
 
-        :param mode: Description
-        :param output_file: Description
+        self.Allgate_name = []          # all cells defined in the LUT
+        self.Cin = []                   # capacitance of each cell
+        self.All_delays = np.array([])  # 2D numpy array delay LUTs for each cell
+        self.All_slews = np.array([])   # 2D numpy array to store output slew LUTs for each cell
+        self.Cload_vals = np.array([])  # 1D numpy array corresponds to the 2nd index in the LUT
+        self.Tau_in_vals = np.array([]) # 1D numpy array corresponds to the 1st index in the LUT
+    
+    
+    
+    def write_nldm_output(self, delay_or_slew, output_file):
+        """
+        Prints the output .txt file from reading the nldm .li file
+
+        :param mode: Determines if the parser argument of --delays or --slews was used (Determines whether the command line prompt wants to calculate delay or slew)
+        :param output_file: Gives the name of the .txt to write to
         """
 
         # Open output nldm file for writing line by line
         with open(output_file, 'w') as nldm_file:
 
-            print('I got here!!!')
-            print(cells)
-            for cell_name, cell_data in cells.items():
-                print(f'cell_name: {cell_name}')
-                print(f'cell_data: {cell_data}')
-                nldm_file.write(f'cell: {cell_name} \n')
+            # Go through every cell in he dictionary of format Cell { Cell_name {all cell parameters or cell_data} }
+            for cell_name, cell_data in self.full_cell.items():
 
-                output_time = cell_data[delay_or_slew]
+                nldm_file.write(f'cell: {cell_name} \n')            # Print cell name (ex. NAND) to file
 
-                slews = ','.join(map(str, output_time['index_1']) + "\n")
-                caps = ','.join(map(str, output_time['index_2']) + "\n")
+                slews = ','.join(map(str, cell_data['index_1']))    # Add every value from 1D array together and seperate them by commas
+                caps = ','.join(map(str, cell_data['index_2']))
 
-                nldm_file.write(f'input slews: {slews}')
-                nldm_file.write(f'load cap: {caps}')
+                nldm_file.write(f'input slews: {slews} \n')         # Print index_1 and index_2 to file
+                nldm_file.write(f'load cap: {caps} \n')
 
-                for row in output_time['delay_or_slew']:
-                    times = ','.join(map(str, row) + "; \n")
-                    nldm_file.write(f'{delay_or_slew}: {times}')
+                # When arguement is --delays
+                if (delay_or_slew == 'delays'):
+                    nldm_file.write(f'\n{delay_or_slew}: \n')
+                    
+                    for row in cell_data['delays']:                 # Should print cell_delays row by row from the 2D array and seperate them by commas
+                        times = ','.join(map(str, row))
+                        nldm_file.write(f'{times}; \n\n')
+
+                # When arguement is --slews
+                elif (delay_or_slew == 'slews'):
+                    nldm_file.write(f'\n{delay_or_slew}: \n')
+                    
+                    for row in cell_data['slews']:                  # Should print output_slew row by row from the 2D array and seperate them by commas
+                        times = ','.join(map(str, row))
+                        nldm_file.write(f'{times}; \n\n')
+                
+                # Shouldn't reach this point of if the argument is --delays or --slews
+                # If no argument is included it should just end the program
+                else:
+                    print(f'Did not specify delay or slew for --read_ndlm')
+                    exit(1)
+
+                nldm_file.write(f'\n\n') # Add space between cells in txt file for formatting/reading
 
 
-    def assign_arrays(self, all_time_values):
+
+    def assign_arrays(self, cell_name, cell_input_cap, cell_input_slew, cell_cap_loads, cell_delays, cell_slews):
         """
+        Will be used for future math in circuit traversal calculations
+        
+        :param cell_name: Description
+        :param cell_input_cap: Description
+        :param cell_input_slew: Description
+        :param cell_cap_loads: Description
+        :param cell_delays: Description
+        :param cell_slews: Description
         """
-        # Finds
-        index_1 = re.findall(r'index_1\s*\(  (.*?)  \)', all_time_values)
-        index_2 = re.findall(r'index_2\s*\(   (.*?) \)', all_time_values)
-
-        # '\\\\' is the re for '\' seperation
-        for line in all_time_values:
-            print(line)
-            time_values = re.findall(r'values\s*\( (.*?) \n \)', line, re.S)
+        # I was thinking for the math since we have to use the netlist and such we could have a condition to check if gate_num_inputs > 2 and 
+        # if so, then use a equation to multiply all delay and slew array values by n
+        self.Allgate_name = [cell_name]                # all cells defined in the LUT
+        self.Cin = [cell_input_cap]                    # capacitance of each cell
+        self.All_delays = np.array([cell_delays])      # 2D numpy array delay LUTs for each cell
+        self.All_slews = np.array([cell_slews])        # 2D numpy array to store output slew LUTs for each cell
+        self.Cload_vals = np.array([cell_cap_loads])   # 1D numpy array corresponds to the 2nd index in the LUT
+        self.Tau_in_vals = np.array([cell_input_slew]) # 1D numpy array corresponds to the 1st index in the LUT
 
 
     def parse_nldm(self, file, delay_or_slew):
         """
-        Docstring for parse_nldm
+        Reads the .lib file and uses regualr expressions to identify and grab different sections of text within the file for arrays
 
         :param file: nldm .library file
-        :param delay_or_slew: Determines whether the command line prompt wants to calculate delay or slew
+        :param delay_or_slew: Determines if the parser argument of --delays or --slews was used (Determines whether the command line prompt wants to calculate delay or slew)
         """
 
-        cells = {}
-
         with open(file, 'r') as lib_file:
-            file_txt = lib_file.read()  # Reads entire file to then edit off of
-
-            #print(file_txt)
-
-
-            # GRab each cell block of code from .lib file
-            # re.S used to match newlines for multi-line txt
-            # Gives list of tuples of (cell_name, txt inside {})
-            # Ignores everything until it sees the word cell
-            #cell_data = re.findall(r'cell \s*\( (.*?) \) \s*\{ (.*?) \n \s*\}', file_txt, re.S)
+            file_txt = lib_file.read()  # Reads entire file to then edit off of using regular expressions
             
-            #cell_data = re.search(r"cell \s*\( (.*?) \) \s*\{ (.*?) \n \s*\}(\s*\})?", file_txt, re.S)
-            #cell_data = re.search(r"cell\s*\(\s*\w+", file_txt, re.S)
-            #cell_data = re.search(r"cell\s*\(\s*(.*?)\)", file_txt, re.S)
+        # (.*?) - used to capture all characters within a specific range greedily and \s* ignores all white space and make it a group
+        # re.S used since it is a multi-line operation with findall() giving all cell instances in a list
+        # Creates 4 total groups to store diffrent values to use in the for loop
+        cell_body = re.findall(r"cell\s*\(\s*(.*?)\)\s*\{(.*?);\n\s*(.*?)\}\s*.*?\{(.*?)\n\s*\}", file_txt, re.S) # Can grab all cells and entire body just in different groups!!
+        #print(f'body: {cell_body}\n\n')
+
+        for cell, cap, delay, slew in cell_body:
+            cell_values = {}              # dictionary to store all future array values
             
-            cell_name = re.findall(r"cell\s*\(\s*(.*?)\)\s*\{(.*?)\n\s*\}", file_txt, re.S) # worked up until the delay values
+            #print(f'cell: {cell}\n')     # ex. cell: INVx1
+            #print(f'cap: {cap}\n')       # cap:     capacitance             : 1.700230
+            #print(f'data: {delay}\n')    # data: cell_delay(Timing_7_7) {...}
+            #print(f'data: {slew}\n')     # data: index_1(...); index_2(...); values(2D array)
+
+            # ([\d\.]+) - captures all digit values including the decimal for the decimal number assuming there is at least 1 number
+            # [0] - grabs the value from the list instead of just returning a list with the value in it
+            cap_value = re.findall(r'capacitance\s*:\s*([\d\.]+)', cap)[0]
+            cell_capacitance = float(cap_value)
+            #print(f'caps: {cap_value}\n\n')
+
+            # Extract cell delay values (index 1 and 2 are to be the same regardless of delay or slew)
+            index_1 = re.findall(r'index_1\s*\("(.*?)"\)', delay)[0]
+            index_2 = re.findall(r'index_2\s*\("(.*?)"\)', delay)[0]
+            delay_values = re.findall(r'values\s*\((.*?)\);', delay, re.S)[0] # Has the entire list and will need to parse for valures
+            slew_values = re.findall(r'values\s*\((.*?)\);', slew, re.S)[0]   # Has the entire list and will need to parse for valures
+
+            #print(f'index_1: {index_1}\n')
+            #print(f'index_2: {index_2}\n')
+            #print(f'delay: {delay_values}\n')
+            #print(f'slew: {slew_values}\n')
+
+            # Create 1D arrays of size 7 to store different tau and load_cap values
+            tau_values = np.zeros(7)
+            load_cap_values = np.zeros(7)
+
+            # Use to track integer position in np.array to add slew values to specific 1D array index
+            index = 0
+            for tau in index_1.split(','):
+                tau_values[index] = float(tau)
+                index += 1
+
+            index = 0
+            for load_cap in index_2.split(','):
+                load_cap_values[index] = float(load_cap)
+                index += 1
+
+            #print(f'taus: {tau_values}\n\n')
+            #print(f'load caps: {load_cap_values}\n\n')
+
+            # Parse delay and slew and get rid of all tab, newline, and \ characters that would complicate parsing
+            delay_time = delay_values.replace('\\', '').replace('\n','').replace('\t','')
+            slew_time = slew_values.replace('\\', '').replace('\n','').replace('\t','')
+
+            #print(f'delay after replacing: {delay_time}\n')
+            #print(f'slew after replacing: {slew_time}\n')
+
+            # Put row by row into a list format to access each as needed
+            delay_rows = re.findall(r'"(.*?)"', delay_time, re.S)
+            slew_rows = re.findall(r'"(.*?)"', slew_time, re.S)
             
+            #print(f'delay rows {delay_rows}\n')
+            #print(f'slew rows {slew_rows}\n')
+
+            # Set size of array to 7 by 7 as per project instructions
+            delay_array = np.zeros((7,7)) # Make 2D arrary for delay
+            slew_array = np.zeros((7,7)) # Make 2D arrary for slew
             
-            cell_delays = re.findall(r"cell_delay\s*\(\s*(.*?)\)\s*\{(.*?)\n\s*\}", file_txt, re.S) # worked up until the delay values
+            # Use to track integer position in np.array to add slew values to specific 2D array index
+            array_position_row = 0
+            array_position_col = 0
 
+            for row in delay_rows:
+                for col in row.split(','):
+                    delay_array[array_position_row][array_position_col] = float(col)
+                    array_position_col += 1
 
-            cell_slews = re.findall(r"output_slew\s*\(\s*(.*?)\)\s*\{(.*?)\n\s*\}", file_txt, re.S) # works to grab just the output slews
+                array_position_row += 1
+                array_position_col = 0 # Reset columns to not go out of index
 
-            # Grabs decimal number values and '.' for float number
-            #cap_value = re.findall(r'capacitance\s*:\s*(.*?)', cell_name)
-#
-            ## Finds all values and arrary and txt within the cell_delay {} and output_slew {} brackets
-            #delay_value = re.search(r'cell_delay.*?\{(.*?)\}', cell_delays, re.S)
-            #slew_value = re.search(r'output_slew.*?\{(.*?)\}', cell_slews, re.S)
+            #print(f'final delay array: {delay_array}\n\n')
 
-            print(f'name: {cell_name}')
-            print(f'delay: {cell_delays}')
-            print(f'slew: {cell_slews}\n\n')
+            # Use to track integer position in np.array to add slew values to specific 2D array index
+            array_position_row = 0
+            array_position_col = 0
 
-            index_1 = re.findall(r'index_1\s*\((.*?)\)', cell_delays[1])
-            index_2 = re.findall(r'index_2\s*\((.*?)\)', cell_delays[1])
-            time_values = re.findall(r'values\s*\((.*?)\n', data, re.S) # Has the entire list and will need to 
+            # Run through slew values in each row and split into columns using commas
+            for row in slew_rows:
+                for col in row.split(','):
+                    slew_array[array_position_row][array_position_col] = float(col)
+                    array_position_col += 1
 
-            print(f'index_1: {index_1}')
-            print(f'index_2: {index_2}')
-            print(f'time: {time_values}')
+                array_position_row += 1
+                array_position_col = 0 # Reset columns to not go out of index
 
-            index_1 = re.findall(r'index_1\s*\((.*?)\)', data)
+            #print(f'final slew array: {slew_array}\n\n')
 
+            # Creates dictionary to store input cap, delay, and slew values
+            cell_values = {
+                'input_cap': cell_capacitance,
+                'index_1': tau_values,
+                'index_2': load_cap_values,
+                'delays': delay_array,
+                'slews': slew_array
+            }
 
-            # '\\\\' is the re for '\' seperation
-            for cell, data in cell_delays:
-                print(f'cell: {cell}')
-                print(f'data: {data}')
+            self.full_cell[cell] = cell_values
+            #print(cell_values)
+            #print(self.full_cell)
 
-                # Finds
-                index_1 = re.findall(r'index_1\s*\((.*?)\)', data)
-                index_2 = re.findall(r'index_2\s*\((.*?)\)', data)
-                time_values = re.findall(r'values\s*\((.*?)\n', data, re.S) # Has the entire list and will need to 
-
-
-                print(f'index_1: {index_1}')
-                print(f'index_2: {index_2}')
-                print(f'time: {time_values}')
-
-            for cell_name, data in cell_slews:
-                cell_values = {} # Creates dictionary to store input cap, delay, and slew values
-
-                # Finds all values contained in paratheses and splits all inputs seperated by commas to get a list ['n1', 'n2', 'n3',...]
-                c_name = re.findall(r'\((.*?)\)', cell_name)[0]
-
-                # Grabs decimal number values and '.' for float number
-                cap_value = re.search(r'capacitance \s*: \s*([\d\.]+)', data)
-
-                # Finds all values and arrary and txt within the cell_delay {} and output_slew {} brackets
-                delay_value = re.search(r'cell_delay.*? \{ (.*?) \}', data, re.S)
-                slew_value = re.search(r'output_slew.*? \{ (.*?) \}', data, re.S)
-
-                # If the capacitance text is found, add to cell_value dict
-                if cap_value:
-                    cell_values['capacitance'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
-
-                # If the delay text is found, add to cell_value dict
-                if delay_value:
-                    cell_values['delay'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
-
-                    ## NEED TO ADD THE WAY TO FIND THE VALUES IN THE 2D ARRARY!!!!
-                    self.assign_arrays(cell_values['delay'])
-
-
-
-
-
-                # If the slew text is found, add to cell_value dict
-                if slew_value:
-                    cell_values['slew'] = float(cap_value.group(1)) # Use group 1 to get first instance of actual value
-
-                    ## NEED TO ADD THE WAY TO FIND THE VALUES IN THE 2D ARRARY!!!!
-                    self.assign_arrays(cell_values['slews'])
-
+            ## NEED TO ADD THE WAY TO CALCULATE THE TIME VALUES BASED ON THE 2D ARRARY!!!!
+            self.assign_arrays(cell,
+                               cell_values['input_cap'],
+                               cell_values['index_1'],
+                               cell_values['index_2'],
+                               cell_values['delays'],
+                               cell_values['slews']
+                               )
 
 
         # Write all values to .txt file
-        #if (delay_or_slew == 'delays'):
-        if delay_or_slew:
+        if (delay_or_slew == 'delays'):
             output_filename = 'delay_LUT.txt'
         elif (delay_or_slew == 'slews'):
             output_filename = 'slew_LUT.txt'
@@ -220,47 +264,46 @@ class LUT:
             print(f'Something went wrong???')
             exit(1)
 
-        self.write_nldm_output(delay_or_slew, cells, output_filename)
+        self.write_nldm_output(delay_or_slew, output_filename)   # Write to .txt with assignment format
+
+
+
 
 def connect_inputs(input_wires, ckt_inputs, node, nodes: dict):
     """
-    Docstring for connect_inputs
+    Connects the primary inputs and mid-level gate inputs in the circuit
     
-    :param input_wires: Description
-    :param nodes: Description
-    :type nodes: dict
-
-    :return: Description
-    :rtype: Node
+    :param input_wires: Represents the inputs to a node/vertice
+    :param nodes: Represnts the object node
+    :type nodes: Represents the dictionary of all node object instances with all the parameters to use
     """
 
-    # Append all inputs for that node into a list
-    input_nodes = []
-
-
+    # Checks all inputs for that node against the node values to determine where they are in circuit
     for input in input_wires:
         input = input.strip()
-        print(f'\nconnect_input - {input}\n')
 
+        # If the input is a primary input of type INPUT
         if input in ckt_inputs:
             input_node = nodes[f'INPUT-{input}']
+
+        # If it's just a general gate -> gate input
         else:
             for n in nodes.values():
                 if n.name.endswith(f'-{input}'):
                     input_node = n
 
-        # Add all fanin and fanouts to circuit
-        node.fanin.append(input_node.name)
-        input_node.fanout.append(node.name)
+        # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
+        node.fanin.append(input_node.name)   # Input -> Node
+        input_node.fanout.append(node.name)  # Input <- Node
 
 
 def connect_outputs(output_wires, nodes: dict):
     """
     Connects final outputs of the circuit
     
-    :param output_wires: Description
-    :param nodes: Description
-    :type nodes: dict
+    :param output_wires: Represents the outputs of a node/vertice
+    :param nodes: Represnts the object node
+    :type nodes: Represents the dictionary of all node object instances with all the parameters to use
     """
     
     # Checks all output_wires against the node values to determine where they are in circuit
@@ -271,8 +314,33 @@ def connect_outputs(output_wires, nodes: dict):
             if node.name.endswith(f'-{output}'):
                 output_node = Node(f'OUTPUT-{output}', 'OUTPUT') # Creates new OUTPUT node type
                 
-                node.fanout.append(output_node.name)
-                output_node.fanin.append(node.name)
+                # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
+                node.fanout.append(output_node.name) # Node -> Output
+                output_node.fanin.append(node.name)  # Node <- Output
+
+
+
+def write_ckt_traversal(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='ckt_traversal.txt'):
+    """
+    Prints the output of traversal calculations as described in appendix 2
+    
+    :param output_file: Gives the name of the .txt to write to
+    """
+
+    # Open output circuit file for writing line by line
+    with open(output_file, 'w') as ckt_file:
+        ckt_file.write(f'Circuit delay: {len(ckt_inputs)}\n')
+
+        # Fanout of specific gates
+        ckt_file.write('Gate slacks:\n')
+
+        # Iterate through all node values and Write all node names and output slack at each node
+        for node in nodes.values():
+            ckt_file.write(f'{node.name}: {node.max_out_arrival}\n')
+
+        ckt_file.write(f'Critical path:\n')
+
+        # NEED TO DO: Print critical path from calculated values
 
 
 
@@ -280,9 +348,9 @@ def connect_outputs(output_wires, nodes: dict):
 # Officially works!!!!!!!
 def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='ckt_details.txt'):
     """
-    Docstring for write_ckt_output
+    Prints the netlist file as described in appendix 1
     
-    :param output_file: Description
+    :param output_file: Gives the name of the .txt to write to
     """
 
     # Open output circuit file for writing line by line
@@ -304,7 +372,6 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
                 # Iterate through all fanout values
                 for n in node.fanout:
                     fanout_values.append(n)
-                    print(f'fanout: {fanout_values}')
 
                 # Write all fanout node pairs and use .join concatinate all output node names
                 ckt_file.write(f'{node.name}: ' + ', '.join(fanout_values) + '\n')
@@ -320,7 +387,6 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
                 # Iterate through all fanout values
                 for n in node.fanin:
                     fanin_values.append(n)
-                    print(f'fanin: {fanin_values}')
 
                 # Write all fanout node pairs and use .join concatinate all input node names
                 ckt_file.write(f'{node.name}: ' + ', '.join(fanin_values) + '\n')
@@ -348,9 +414,8 @@ def parse_bench(file):
             # Finds the \d+ decimal value character  connected to the enclosed ()
             if line.startswith('INPUT'):
                 input_wire = re.findall(r'\((\d+)\)', line)[0]
-                print(f'input_wire {input_wire}')
+                #print(f'input_wire {input_wire}')
                 inputs.append(input_wire)
-
                 input_name = f'INPUT-{input_wire}'
 
                 # Create INPUT nodes for starting gates
@@ -361,27 +426,25 @@ def parse_bench(file):
                 else:
                     input_node = nodes[input_name]
 
-                print(f'input_node {vars(input_node)}')
-
             elif line.startswith('OUTPUT'):
                 output_wire = re.findall(r'\((\d+)\)', line)[0]
-                print(f'output_wire {output_wire}')
+                #print(f'output_wire {output_wire}')
                 outputs.append(output_wire)
 
+            # When node is not a primary input/output
             elif ('=') in line:
-                gate_name, gate = line.split('=')
+                gate_name, gate = line.split('=')       # Splits at '=' so ex. gate_name is 10 '=' and gate is NAND(1,3)
                 output_wire_name = gate_name.strip()
 
                 # Finds the \w+ word character instance connected to the initial ( ex. 'name('
                 gate_type = re.findall(r'(\w+)\(', gate)[0]
-                print(f'gate type {gate_type}')
 
                 # Finds all values contained in paratheses and splits all inputs seperated by commas to get a list ['n1', 'n2', 'n3',...]
                 input_wires = re.findall(r'\((.*?)\)', gate)[0].split(',')
-                print(f'input_wires {input_wires}')
+                #print(f'\ninput_wires {input_wires}')
 
                 gate_name = f'{gate_type}-{output_wire_name}'
-                print(f'gate name {gate_name}')
+                #print(f'gate name {gate_name}')
 
                 # Checks to see if node has already been created, if not, adds it to netlist
                 if gate_name not in nodes:
@@ -390,23 +453,14 @@ def parse_bench(file):
                 else:
                     node = nodes[gate_name]
 
-                print(f'node {vars(node)}')
+                #print(f'node {vars(node)}')
 
                 # Increment the number of gates of that type by 1
                 gate_counter[gate_type] += 1
 
-                print(gate_counter)
-
                 # Connect gate inputs
                 connect_inputs(input_wires, inputs, node, nodes)
-
-                # Add all fanin and fanouts to circuit
-                #node.fanin.append(input_values)
-                #input_node.fanout.append(node.name)
-
-                #print(f'after connected input node name {vars(node)}')
-                #print(f'connected input node name {vars(input_node)}')
-
+                #print(f'\nafter connected input node name {vars(node)}\n')
 
             else:
                 continue # Information not important for netlist creation
@@ -415,12 +469,9 @@ def parse_bench(file):
     connect_outputs(outputs, nodes)
     
     # Write all values to .txt file
-    output_filename = 'ckt_details.txt'
+    filename = str(file).replace('.', '_')
+    output_filename = f'ckt_details_{filename}.txt'
     write_ckt_output(inputs, outputs, gate_counter, nodes, output_filename)
-
-
-
-
 
 
 
@@ -429,9 +480,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
                             description='STA program to read circuit and nldm library files')
 
+    # Add arguments to created line command
+    # python3.7 parser_sta.py --read_ckt c17.bench
     parser.add_argument('--read_ckt', type=pathlib.Path, help='Create path to ckt.bench file')
 
-    # Add arguments to created line command
     # python3.7 parser_sta.py --delays --read_nldm sample_NLDM.lib
     # python3.7 parser_sta.py --slews --read_nldm sample_NLDM.lib
     parser.add_argument('--read_nldm', type=pathlib.Path, help='Create path to nldm .library file')
@@ -439,7 +491,7 @@ if __name__ == '__main__':
     parser.add_argument('--slews', action='store_true', help='Solves for output slews in nldm file')
 
     args = parser.parse_args() # Will grab all created command arguements
-    print(args) # Sanity check
+    #print(args) # Sanity check
 
     # Check if argument is called/exists and if circuit file exists
     if args.read_ckt:
@@ -454,24 +506,14 @@ if __name__ == '__main__':
         if args.read_nldm.is_file():
             lut = LUT()
             if args.delays:
-                print(args.read_nldm)
-                lut.parse_nldm(args.read_nldm, args.delays) # Calls function to parse .lib file for delays
+                mode = 'delays'
+                lut.parse_nldm(args.read_nldm, mode) # Calls function to parse .lib file for --delays
             elif args.slews:
-                lut.parse_nldm(args.read_nldm, args.slews)  # Calls function to parse .lib file for slews
+                mode = 'slews'
+                lut.parse_nldm(args.read_nldm, mode)  # Calls function to parse .lib file for --slews
             else:
                 print(f'Error: Specify --delays or --slews when using - {args.read_nldm}')
 
         else:
             print(f'Error: NLDM file not found - {args.read_nldm}')
-
-    
-    #lut = LUT()
-    #if args.delays:
-    #    lut.parse_nldm(args.read_nldm, args.delays) # Calls function to parse .lib file for delays
-    #elif args.slews:
-    #    lut.parse_nldm(args.read_nldm, args.slews)  # Calls function to parse .lib file for slews
-    #else:
-    #    print(f'Error: Specify --delays or --slews when using - {args.read_nldm}')
-
-    
 
