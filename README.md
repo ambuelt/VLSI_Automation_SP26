@@ -8,9 +8,9 @@ calculate the delay and slew from traversing through the circuit (phase 2).
 
 **Instructions for Running Python Code** - *Setting up virtual env and packages*
 
-python3.7 -m venv <name of venv>
+python3.7 -m venv .myenv
 
-source <name of venv>/bin/activate
+source .myenv/bin/activate
 
 pip3 install -r requirements.txt
 
