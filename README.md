@@ -25,7 +25,8 @@ python3.7 parser.py --read_ckt b15.bench
 python3.7 parser.py --delays --read_nldm sample_NLDM.lib
 
 python3.7 parser.py --slews --read_nldm sample_NLDM.lib
-  
+
+<br>
 
 **All Files + Folders and their description**
 
@@ -38,6 +39,7 @@ python3.7 parser.py --slews --read_nldm sample_NLDM.lib
 |c7552.bench                |                 - Mid-size circuit test bench |
 |sample_NLDM.lib            |                 - Library file holding the different types of cells and their delay, cap, and slew values |
   
+<br>
 
 *All of the following is not needed for running this assignment*
 
