@@ -15,8 +15,8 @@ python3.7 parser.py --delays --read_nldm sample_NLDM.lib
 python3.7 parser.py --slews --read_nldm sample_NLDM.lib
 
 **All Files + Folders and their description**
-*Filename:                                     Description:*
-parser.py                                      - Acts as the main python file with Node and LUT classes to parse and print the different .txt outputs
+*Filename:                                     Description:*\n
+parser.py                                      - Acts as the main python file with Node and LUT classes to parse and print the different .txt outputs\n
 requirements.txt                               - Includes all python packages to install for code (some packages used should automatically be built into python 3.7)
 b15.bench                                      - Largest circuit test bench
 c17.bench                                      - Smallest circuit test bench
