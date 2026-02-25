@@ -1,6 +1,8 @@
 # VLSI_Automation_SP26 - Mini Project 1 README
 Repository to hold mini project 1 for EEE598 - VLSI Automation class
 
+Team: Ctrl Freaks (Annika Buelt and Shreya Tripathi)
+
 This mini-project 1 will parse the test benches and nldm library files (phase 1) and 
 calculate the delay and slew from traversing through the circuit (phase 2).
 
