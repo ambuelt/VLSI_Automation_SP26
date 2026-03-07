@@ -40,7 +40,8 @@ python3 parser.py --read_ckt b15.bench --read_nldm sample_NLDM.lib
 |parser.py                  |                 - Acts as the main python file with Node and LUT classes to parse and print the different .txt outputs |
 |requirements.txt           |                 - Includes all python packages to install for code (some packages used should automatically be built into python 3.7) |
 |c17.bench                  |                 - Smallest circuit test bench |
-|c7552.bench                |                 - Largest circuit test bench |
+|c7552.bench                |                 - mid circuit test bench      |
+|b15.bench                  |                 - Largest circuit test bench  |
 |sample_NLDM.lib            |                 - Library file holding the different types of cells and their delay, cap, and slew values |
   
 <br>
