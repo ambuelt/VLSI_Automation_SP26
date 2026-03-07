@@ -434,7 +434,7 @@ def compute_cload(nodes, lut):
             #print(f'\nafter connected output node name {vars(node)}\n')
             #print(f'\noutput node name {fan_o.name}\n')
             #print(f'\n nodes : {nodes}\n')
-            fanout_n = nodes[fan_o.name]
+            fanout_n = fan_o
 
             if fanout_n.gate_type == 'OUTPUT':
                 total_cap += 4 * lut.full_cell['INV_X1']['input_cap']
@@ -465,15 +465,17 @@ def interpolate_arrays(slew_row, cap_col, xvals, yvals, array_2d_vals):
         #print(f'x : {x}')
         #print(f'y : {y}')
 
-        cap1, cap2     = xvals[x], xvals[x+1]
-        slew1, slew2   = yvals[y], yvals[y+1]
+        slew1, slew2   = xvals[x], xvals[x+1]
+        #cap1, cap2     = xvals[x], xvals[x+1]
+        #slew1, slew2   = yvals[y], yvals[y+1]
+        cap1, cap2     = yvals[y], yvals[y+1]
 
         v11 = array_2d_vals[x][y]
         v12 = array_2d_vals[x][y+1]
         v21 = array_2d_vals[x+1][y]
         v22 = array_2d_vals[x+1][y+1]
 
-        numerator = (v11 * (cap2 - x)*(slew2 - y)) + (v12 * (x - cap1)*(slew2 - y)) + (v21 * (cap2 - x)*(y - slew1)) + (v22 * (x - cap1)*(y - slew1))
+        numerator = (v11 * (cap2 - cap_col)*(slew2 - slew_row)) + (v12 * (cap_col - cap1)*(slew2 - slew_row)) + (v21 * (cap2 - cap_col)*(slew_row - slew1)) + (v22 * (cap_col - cap1)*(slew_row - slew1))
         denominator = (cap2 - cap1) * (slew2 - slew1)
 
         interpolated_value = numerator / denominator
@@ -490,25 +492,30 @@ def topological_order(nodes):
     # Compute indegrees for each node
     for node in nodes.values():
         indegree[node.name] = len(node.fanin)
+        if indegree[node.name] == 0:
+            queue.append(node)
+
+    print(f'queue : {queue}')
             
     # Add all nodes with indegree 0 into the queue
-    for name, degree in indegree.items():
-        if degree == 0:
-            queue.append(name)
+    #for node in nodes.values():
+    #    if indegree[node.name] == 0:
+    #        queue.append(node)
 
     # Kahn’s Algorithm
     while queue:
         node = queue.popleft()       # Pop the first node on the queue
+        print(f'node : {node}')
         gate_order.append(node)  # Add node to visited nodes in the gate order
 
         # Check all connected nodes via the fanout
-        for next_node in nodes[node].fanout:
+        for next_node in node.fanout:
             #print(f'indegree : {indegree}')
             indegree[next_node.name] -= 1 # Subtract the indegree of next_node since others were processed
 
             # If next_node is connected to previous node
             if indegree[next_node.name] == 0:
-                queue.append(next_node.name)
+                queue.append(next_node)
 
     return gate_order
 
@@ -516,12 +523,13 @@ def topological_order(nodes):
 def forward_sta(nodes, lut):
 
     order = topological_order(nodes)
+    print(f'order : {order}')
 
-    for gate_n in order:
-        node = nodes[gate_n]
+    for gate in order:
+        node = nodes[gate.name]
 
         if node.gate_type == 'OUTPUT':
-            prev_node = nodes[node.fanin[0]]  # Identifies sole fanin for output
+            prev_node = node.fanin[0]  # Identifies sole fanin for output
             node.max_out_arrival = prev_node.max_out_arrival
 
         max_arrival_time, fastest_slew = 0.0, 0.0
@@ -573,8 +581,8 @@ def backward_sta(nodes, ckt_delay):
     order = topological_order(nodes)
     order.reverse()   # Reverses list order for backwards traversal
 
-    for gate_n in order:
-        node = nodes[gate_n]
+    for gate in order:
+        node = nodes[gate.name]
 
         if node.gate_type == 'OUTPUT':
             node.required_time = required_arrival_time
