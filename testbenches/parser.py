@@ -8,11 +8,13 @@
 # to traverse the circuit and calculate delays and critical path.              #
 ################################################################################
 
+# All automatically in python 3.7 in theory
 import argparse
 import pathlib
 import numpy as np
 import re
 from collections import defaultdict
+from collections import deque
 
 
 class Node:
@@ -27,16 +29,17 @@ class Node:
         self.name = gate_name      # Gives the name with the gate_type and coresponding number
         self.gate_type = gate_type # Specifes the gate function (ex. INPUT, NOR, INV, NAND)
 
-        self.Cload = 0.0           # Gives input capacitance of the gate
+        self.Cload = 0.0           # Gives output capacitance of the gate
 
         self.fanin = []            # list of handles to the fanin nodes of this node
         self.fanout =[]            # list of handles to the fanout nodes of this node
 
         self.Tau_in = []           # array/list of input slews (for all inputs to the gate), to be used for STA
         self.inp_arrival = []      # array/list of input arrival times for input transitions (ignore rise or fall)
-        self.outp_arrival = []     # array/list of output arrival times,outp_arrival = inp_arrival + cell_delay
+        self.outp_arrival = []     # array/list of output arrival times, outp_arrival = inp_arrival + cell_delay
         self.max_out_arrival = 0.0 # arrival time at the output of this gate using max on (inp_arrival + cell_delay)
         self.Tau_out = 0.0         # Resulting output slew
+        self.slack = 0.0
 
 class LUT:
     def __init__(self):
@@ -125,7 +128,7 @@ class LUT:
         self.Tau_in_vals = np.array([cell_input_slew]) # 1D numpy array corresponds to the 1st index in the LUT
 
 
-    def parse_nldm(self, file, delay_or_slew):
+    def parse_nldm(self, file, delay_or_slew=None):
         """
         Reads the .lib file and uses regualr expressions to identify and grab different sections of text within the file for arrays
 
@@ -258,18 +261,16 @@ class LUT:
         # Write all values to .txt file
         if (delay_or_slew == 'delays'):
             output_filename = 'delay_LUT.txt'
+            self.write_nldm_output(delay_or_slew, output_filename)   # Write to .txt with assignment format
+
         elif (delay_or_slew == 'slews'):
             output_filename = 'slew_LUT.txt'
-        else:
-            print(f'Something went wrong???')
-            exit(1)
-
-        self.write_nldm_output(delay_or_slew, output_filename)   # Write to .txt with assignment format
+            self.write_nldm_output(delay_or_slew, output_filename)   # Write to .txt with assignment format
 
 
 
 
-def connect_inputs(input_wires, ckt_inputs, node, nodes: dict):
+def connect_inputs(gate_connections, nodes: dict):
     """
     Connects the primary inputs and mid-level gate inputs in the circuit
     
@@ -278,23 +279,31 @@ def connect_inputs(input_wires, ckt_inputs, node, nodes: dict):
     :type nodes: Represents the dictionary of all node object instances with all the parameters to use
     """
 
+    ckt_wires = {}
+
+    for n in nodes.values():
+        wire = n.name.split('-')[-1]
+        ckt_wires[wire] = n
+
     # Checks all inputs for that node against the node values to determine where they are in circuit
-    for input in input_wires:
-        input = input.strip()
+    for gate_n, output_w, input_w in gate_connections:
 
-        # If the input is a primary input of type INPUT
-        if input in ckt_inputs:
-            input_node = nodes[f'INPUT-{input}']
+        gate_node = nodes[gate_n]
+        #print(f'\ngate_node : {gate_node.name}\n')
 
-        # If it's just a general gate -> gate input
-        else:
-            for n in nodes.values():
-                if n.name.endswith(f'-{input}'):
-                    input_node = n
+        for w in input_w:
+            input = w.strip()
+            input_node = ckt_wires[input]
 
-        # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
-        node.fanin.append(input_node.name)   # Input -> Node
-        input_node.fanout.append(node.name)  # Input <- Node
+            # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
+            gate_node.fanin.append(input_node)   # Input -> Node
+            input_node.fanout.append(gate_node)  # Input <- Node
+
+
+            #print(f'\nafter connected input node name {vars(gate_node)}\n')
+            #print(f'\nafter connected input node name {vars(input_node)}\n')
+
+
 
 
 def connect_outputs(output_wires, nodes: dict):
@@ -308,39 +317,30 @@ def connect_outputs(output_wires, nodes: dict):
     
     # Checks all output_wires against the node values to determine where they are in circuit
     for output in output_wires:
+
+        output_name = f'OUTPUT-{output}'
+
+        if output_name not in nodes:
+            nodes[output_name] = Node(output_name, 'OUTPUT')
+            output_node = nodes[output_name]
+        else:
+            output_node = nodes[output_name]
+
         for node in nodes.values():
 
             # If output is only connected to a number, replace it with OUTPUT-that number
             if node.name.endswith(f'-{output}'):
-                output_node = Node(f'OUTPUT-{output}', 'OUTPUT') # Creates new OUTPUT node type
+                #output_name = f'OUTPUT-{output}'
+                #output_node = Node(output_name, 'OUTPUT') # Creates new OUTPUT node type
+
+                #output_node.Cload = 4 * LUT.full_cell['INVx1']['input_cap']
                 
                 # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
-                node.fanout.append(output_node.name) # Node -> Output
-                output_node.fanin.append(node.name)  # Node <- Output
+                node.fanout.append(output_node) # Node -> Output
+                output_node.fanin.append(node)  # Node <- Output
 
-
-
-def write_ckt_traversal(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='ckt_traversal.txt'):
-    """
-    Prints the output of traversal calculations as described in appendix 2
-    
-    :param output_file: Gives the name of the .txt to write to
-    """
-
-    # Open output circuit file for writing line by line
-    with open(output_file, 'w') as ckt_file:
-        ckt_file.write(f'Circuit delay: {len(ckt_inputs)}\n')
-
-        # Fanout of specific gates
-        ckt_file.write('Gate slacks:\n')
-
-        # Iterate through all node values and Write all node names and output slack at each node
-        for node in nodes.values():
-            ckt_file.write(f'{node.name}: {node.max_out_arrival}\n')
-
-        ckt_file.write(f'Critical path:\n')
-
-        # NEED TO DO: Print critical path from calculated values
+                #print(f'\nafter connected output node name {vars(node)}\n')
+                #print(f'\nafter connected output node name {vars(output_node)}\n')
 
 
 
@@ -364,6 +364,7 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
 
         # Fanout of specific gates
         ckt_file.write('\nFanout...\n')
+        
         # Iterate through all node values
         for node in nodes.values():
             if not (node.gate_type == 'INPUT'):
@@ -371,10 +372,12 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
 
                 # Iterate through all fanout values
                 for n in node.fanout:
-                    fanout_values.append(n)
+                    fanout_values.append(n.name)
 
                 # Write all fanout node pairs and use .join concatinate all output node names
+                #print(f'fanout : {fanout_values}')
                 ckt_file.write(f'{node.name}: ' + ', '.join(fanout_values) + '\n')
+                #print(f'{node.name}: ' + ', '.join(fanout_values) + '\n')
 
 
         # Fanin of specific gates
@@ -386,14 +389,188 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
 
                 # Iterate through all fanout values
                 for n in node.fanin:
-                    fanin_values.append(n)
+                    fanin_values.append(n.name)
 
                 # Write all fanout node pairs and use .join concatinate all input node names
                 ckt_file.write(f'{node.name}: ' + ', '.join(fanin_values) + '\n')
+                #print(f'{node.name}: ' + ', '.join(fanin_values) + '\n')
+
+
+def write_ckt_traversal(ckt_inputs, ckt_outputs, gate_counter, nodes, path, output_file='ckt_traversal.txt'):
+    """
+    Prints the output of traversal calculations as described in appendix 2
+    
+    :param output_file: Gives the name of the .txt to write to
+    """
+
+    # Open output circuit file for writing line by line
+    with open(output_file, 'w') as ckt_file:
+        ckt_file.write(f'Circuit delay: {len(ckt_inputs)}\n')
+
+        # Fanout of specific gates
+        ckt_file.write('Gate slacks:\n')
+
+        # Iterate through all node values and Write all node names and output slack at each node
+        for node in nodes.values():
+            ckt_file.write(f'{node.name}: {node.max_out_arrival}\n')
+
+        ckt_file.write(f'Critical path:\n')
+        ckt_file.write(', '.join(path))
 
 
 
-def parse_bench(file):
+def compute_cload(nodes, lut):
+
+    # Iterate through all node values
+    for node in nodes.values():
+        total_cap = 0.0
+
+        if node.gate_type in ['INPUT', 'OUTPUT']:
+            continue
+
+        for fan_o in node.fanout:
+            #print(f'\nafter connected output node name {vars(node)}\n')
+            #print(f'\noutput node name {fan_o.name}\n')
+            #print(f'\n nodes : {nodes}\n')
+            fanout_n = nodes[fan_o.name]
+
+            if fanout_n.gate_type == 'OUTPUT':
+                total_cap += 4 * lut.full_cell['INV_X1']['input_cap']
+            else:
+                if fanout_n.gate_type == 'BUFF':
+                    gate_name = 'BUF_X1'
+                elif fanout_n.gate_type == 'NOT':
+                    gate_name = 'INV_X1'
+                else:
+                    gate_name = fanout_n.gate_type + '2_X1'
+
+
+                total_cap += lut.full_cell[gate_name]['input_cap']
+
+        node.Cload = total_cap
+
+
+def interpolate_arrays(slew_row, cap_col, xvals, yvals, array_2d_vals):
+
+        x = np.searchsorted(xvals, slew_row) - 1
+        y = np.searchsorted(yvals, cap_col)  - 1
+
+        # Was having bounds issues and Codex gave the following two lines as a solution
+        # -2 makes it so that x+1 and y+1 are valid
+        x = max(0, min(x, len(xvals)-2))
+        y = max(0, min(y, len(yvals)-2))
+
+        #print(f'x : {x}')
+        #print(f'y : {y}')
+
+        cap1, cap2     = xvals[x], xvals[x+1]
+        slew1, slew2   = yvals[y], yvals[y+1]
+
+        v11 = array_2d_vals[x][y]
+        v12 = array_2d_vals[x][y+1]
+        v21 = array_2d_vals[x+1][y]
+        v22 = array_2d_vals[x+1][y+1]
+
+        numerator = (v11 * (cap2 - x)*(slew2 - y)) + (v12 * (x - cap1)*(slew2 - y)) + (v21 * (cap2 - x)*(y - slew1)) + (v22 * (x - cap1)*(y - slew1))
+        denominator = (cap2 - cap1) * (slew2 - slew1)
+
+        interpolated_value = numerator / denominator
+        return interpolated_value
+
+
+def topological_order(nodes):
+    # Used geeksforgeeks as baseline for topological sort (https://www.geeksforgeeks.org/dsa/topological-sorting-indegree-based-solution/)
+    n = len(nodes)
+    gate_order = []
+    indegree = {}
+    queue = deque()
+
+    # Compute indegrees for each node
+    for node in nodes.values():
+        indegree[node.name] = len(node.fanin)
+            
+    # Add all nodes with indegree 0 into the queue
+    for name, degree in indegree.items():
+        if degree == 0:
+            queue.append(name)
+
+    # Kahn’s Algorithm
+    while queue:
+        node = queue.popleft()       # Pop the first node on the queue
+        gate_order.append(node)  # Add node to visited nodes in the gate order
+
+        # Check all connected nodes via the fanout
+        for next_node in nodes[node].fanout:
+            #print(f'indegree : {indegree}')
+            indegree[next_node.name] -= 1 # Subtract the indegree of next_node since others were processed
+
+            # If next_node is connected to previous node
+            if indegree[next_node.name] == 0:
+                queue.append(next_node.name)
+
+    return gate_order
+
+
+def forward_sta(nodes, lut):
+
+    order = topological_order(nodes)
+
+    for gate_n in order:
+        node = nodes[gate_n]
+
+        if node.gate_type == 'OUTPUT':
+            prev_node = nodes[node.fanin[0]]  # Identifies sole fanin for output
+
+
+            node.max_out_arrival = prev_node.max_out_arrival
+
+        max_arrival_time, fastest_slew = 0.0, 0.0
+
+        for fan_in in node.fanin:
+            prev_node = nodes[fan_in.name]
+
+            if node.gate_type == 'BUFF':
+                    gate_name = 'BUF_X1'
+            elif node.gate_type == 'NOT':
+                gate_name = 'INV_X1'
+            else:
+                gate_name = node.gate_type + '2_X1'
+
+            # Calculate the input slew of an input of the current gate from the output slew of the previous gate
+            tau_in = prev_node.Tau_out
+
+            # Calculate the input arrival of an input of the current gate from the output arrival of the previous gate
+            input_arrival = prev_node.max_out_arrival
+
+            # Grab values from the LUT object
+            slew_array = lut.full_cell[gate_name]['index_1']
+            cap_array = lut.full_cell[gate_name]['index_2']
+            gate_delay_array = lut.full_cell[gate_name]['delays']
+            gate_slew_array = lut.full_cell[gate_name]['slews']
+
+            # Perform interpolation calculations
+            gate_delay = interpolate_arrays(tau_in, node.Cload, slew_array, cap_array, gate_delay_array)
+            gate_slew  = interpolate_arrays(tau_in, node.Cload, slew_array, cap_array, gate_slew_array)
+
+            # Determine a_out = a_in + delay
+            a_out = input_arrival + gate_delay
+
+            # Determine a_out = max(a_in + delay)
+            # Check to for each input to see which gives the max a_out
+            if a_out > max_arrival_time:
+                max_arrival_time = a_out
+                fastest_slew = gate_slew
+
+        # Now that all inputs have been checked and the max determined
+        node.max_out_arrival = max_arrival_time
+        node.Tau_out = fastest_slew
+
+
+def backward_sta(nodes, ckt_delay):
+    
+
+
+def parse_bench(file, lut=None):
     """
     Parses the ckt.bench files to get circuit topology
     
@@ -402,6 +579,8 @@ def parse_bench(file):
     inputs, outputs = [], []        # Creates lists to store the inputs/outputs of nodes (in this case ckt gates)
     nodes = {}                      # Creates dictionary to store all node objects
     gate_counter = defaultdict(int) # Creates dictionary to count the integer number of gates per type created
+
+    gate_connections = []
 
     # Open ckt.bench file for reading and parse each line
     with open(file, 'r') as ckt_file:
@@ -413,7 +592,7 @@ def parse_bench(file):
             # Identify Inputs using regular expressions
             # Finds the \d+ decimal value character  connected to the enclosed ()
             if line.startswith('INPUT'):
-                input_wire = re.findall(r'\((\d+)\)', line)[0]
+                input_wire = re.findall(r'\((.*?)\)', line)[0]
                 #print(f'input_wire {input_wire}')
                 inputs.append(input_wire)
                 input_name = f'INPUT-{input_wire}'
@@ -426,10 +605,21 @@ def parse_bench(file):
                 else:
                     input_node = nodes[input_name]
 
+                input_node.outp_arrival.append(0.0)
+                input_node.max_out_arrival = 0.0
+                input_node.Tau_out = 0.002 # 2ps
+
             elif line.startswith('OUTPUT'):
-                output_wire = re.findall(r'\((\d+)\)', line)[0]
+                output_wire = re.findall(r'\((.*?)\)', line)[0]
                 #print(f'output_wire {output_wire}')
                 outputs.append(output_wire)
+                output_name = f'OUTPUT-{input_wire}'
+
+                #if output_name not in nodes:
+                #    nodes[output_name] = Node(output_name, 'OUTPUT')
+                #    output_node = nodes[output_name]
+                #else:
+                #    output_node = nodes[output_name]
 
             # When node is not a primary input/output
             elif ('=') in line:
@@ -458,12 +648,39 @@ def parse_bench(file):
                 # Increment the number of gates of that type by 1
                 gate_counter[gate_type] += 1
 
-                # Connect gate inputs
-                connect_inputs(input_wires, inputs, node, nodes)
+                # Connect gate inputs but will not fully connect them since gates come up later and I don't want to assign them at the wrong time by accident
+                gate_connections.append((gate_name, output_wire_name, input_wires))
+                #connect_inputs(input_wires, inputs, node, nodes)
                 #print(f'\nafter connected input node name {vars(node)}\n')
 
             else:
                 continue # Information not important for netlist creation
+    
+    
+    #ckt_wires = {}
+#
+    #for n in nodes.values():
+    #    wire = n.name.split('-')[-1]
+    #    ckt_wires[wire] = n
+#
+    ## Checks all inputs for that node against the node values to determine where they are in circuit
+    #for gate_n, output_w, input_w in gate_connections:
+#
+    #    gate_node = nodes[gate_n]
+    #    #print(f'\ngate_node : {gate_node.name}\n')
+#
+    #    for w in input_w:
+    #        input = w.strip()
+    #        input_node = ckt_wires[input]
+#
+    #        # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
+    #        gate_node.fanin.append(input_node.name)   # Input -> Node
+    #        input_node.fanout.append(gate_node.name)  # Input <- Node
+#
+    #        #print(f'\nafter connected input node name {vars(gate_node)}\n')
+    #        #print(f'\nafter connected input node name {vars(input_node)}\n')
+
+    connect_inputs(gate_connections, nodes)
     
     # Connect all output nodes in fanout
     connect_outputs(outputs, nodes)
@@ -473,6 +690,53 @@ def parse_bench(file):
     output_filename = f'ckt_details_{filename}.txt'
     write_ckt_output(inputs, outputs, gate_counter, nodes, output_filename)
 
+    ## START STA ##
+    if lut is not None:
+
+        compute_cload(nodes, lut)
+
+        forward_sta(nodes, lut)
+
+        # Compute Total Circuit Delay
+        delay = 0.0
+        output_node_list = []
+
+        for n in nodes.values():
+            if n.gate_type == 'OUTPUT':
+                delay = max(delay, n.max_out_arrival)
+                output_node_list.append(n)
+        
+        backward_sta(nodes, delay)
+
+        # Compute Critical Path
+        path = []                                                                    # List to store all node names in crit path
+        crit_path_start = min(output_node_list, key=lambda out_node: out_node.slack) # Determines output with minimum output slack
+        
+        gate = crit_path_start # Start node chain
+
+        # Will keep iterating backwards via the gates until there is an gate with not inputs (i.e. 'INPUT' node)
+        while gate.fanin:
+            fanin_n = [] # Stores all fanin nodes of a gate to check for min
+
+            # Check all intputs for that gate
+            for fan_in in gate.fanin:
+                fanin_n.append(nodes[fan_in])  # Grabs the object of 
+            
+            print(f'fanin nodes : {fanin_n}')
+
+            path.append(gate.name)
+            gate = min(fanin_n, key=lambda in_node: in_node.slack)
+
+
+        path.append(gate.name) # Add INPUT node
+        path.reverse()         # Use to make sure that the critical path is read from INPUT -> OUTPUT 
+
+        write_ckt_traversal(inputs, outputs, gate_counter, nodes, path, output_file=f'ckt_traversal_{filename}.txt')
+
+
+
+
+
 
 
 # Main parser logic
@@ -481,24 +745,20 @@ if __name__ == '__main__':
                             description='STA program to read circuit and nldm library files')
 
     # Add arguments to created line command
-    # python3.7 parser_sta.py --read_ckt c17.bench
+    # py parser.py --read_ckt c17.bench
     parser.add_argument('--read_ckt', type=pathlib.Path, help='Create path to ckt.bench file')
 
-    # python3.7 parser_sta.py --delays --read_nldm sample_NLDM.lib
-    # python3.7 parser_sta.py --slews --read_nldm sample_NLDM.lib
+    # py parser.py --delays --read_nldm sample_NLDM.lib
+    # py parser.py --slews --read_nldm sample_NLDM.lib
     parser.add_argument('--read_nldm', type=pathlib.Path, help='Create path to nldm .library file')
     parser.add_argument('--delays', action='store_true', help='Solves for delays in nldm file')
     parser.add_argument('--slews', action='store_true', help='Solves for output slews in nldm file')
 
     args = parser.parse_args() # Will grab all created command arguements
     #print(args) # Sanity check
-
-    # Check if argument is called/exists and if circuit file exists
-    if args.read_ckt:
-        if args.read_ckt.is_file():
-            parse_bench(args.read_ckt) # Calls function to parse ckt.bench file
-        else:
-            print(f'Error: Circuit file not found - {args.read_ckt}')
+    
+    lut = None # In case you are only parsing and not doing STA
+    mode = None
 
 
     # Check argument is called/exists and if library file exists
@@ -512,8 +772,20 @@ if __name__ == '__main__':
                 mode = 'slews'
                 lut.parse_nldm(args.read_nldm, mode)  # Calls function to parse .lib file for --slews
             else:
-                print(f'Error: Specify --delays or --slews when using - {args.read_nldm}')
+                lut.parse_nldm(args.read_nldm, mode)
 
         else:
             print(f'Error: NLDM file not found - {args.read_nldm}')
+
+
+    print(f'LUT : {vars(lut)}\n\n')
+    print(f'key : {list(lut.full_cell.keys())}')
+    #exit(1)
+    
+    # Check if argument is called/exists and if circuit file exists
+    if args.read_ckt:
+        if args.read_ckt.is_file():
+            parse_bench(args.read_ckt, lut) # Calls function to parse ckt.bench file
+        else:
+            print(f'Error: Circuit file not found - {args.read_ckt}')
 
