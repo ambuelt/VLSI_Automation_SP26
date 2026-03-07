@@ -20,9 +20,17 @@ python3 parser.py --read_ckt c17.bench
 
 python3 parser.py --read_ckt c7552.bench
 
+python3 parser.py --read_ckt b15.bench
+
 python3 parser.py --delays --read_nldm sample_NLDM.lib
 
 python3 parser.py --slews --read_nldm sample_NLDM.lib
+
+python3 parser.py --read_ckt c17.bench --read_nldm sample_NLDM.lib
+
+python3 parser.py --read_ckt c7552.bench --read_nldm sample_NLDM.lib
+
+python3 parser.py --read_ckt b15.bench --read_nldm sample_NLDM.lib
 
 <br>
 
