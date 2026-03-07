@@ -39,7 +39,9 @@ class Node:
         self.outp_arrival = []     # array/list of output arrival times, outp_arrival = inp_arrival + cell_delay
         self.max_out_arrival = 0.0 # arrival time at the output of this gate using max on (inp_arrival + cell_delay)
         self.Tau_out = 0.0         # Resulting output slew
+
         self.slack = 0.0
+        self.required_time = 0.0
 
 class LUT:
     def __init__(self):
@@ -396,7 +398,7 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
                 #print(f'{node.name}: ' + ', '.join(fanin_values) + '\n')
 
 
-def write_ckt_traversal(ckt_inputs, ckt_outputs, gate_counter, nodes, path, output_file='ckt_traversal.txt'):
+def write_ckt_traversal(ckt_inputs, ckt_outputs, ckt_delay, nodes, path, output_file='ckt_traversal.txt'):
     """
     Prints the output of traversal calculations as described in appendix 2
     
@@ -405,16 +407,16 @@ def write_ckt_traversal(ckt_inputs, ckt_outputs, gate_counter, nodes, path, outp
 
     # Open output circuit file for writing line by line
     with open(output_file, 'w') as ckt_file:
-        ckt_file.write(f'Circuit delay: {len(ckt_inputs)}\n')
+        ckt_file.write(f'Circuit delay: {ckt_delay} ps\n')
 
         # Fanout of specific gates
-        ckt_file.write('Gate slacks:\n')
+        ckt_file.write('\nGate slacks:\n')
 
         # Iterate through all node values and Write all node names and output slack at each node
         for node in nodes.values():
-            ckt_file.write(f'{node.name}: {node.max_out_arrival}\n')
+            ckt_file.write(f'{node.name}: {node.max_out_arrival} ps\n')
 
-        ckt_file.write(f'Critical path:\n')
+        ckt_file.write(f'\nCritical path:\n')
         ckt_file.write(', '.join(path))
 
 
@@ -520,8 +522,6 @@ def forward_sta(nodes, lut):
 
         if node.gate_type == 'OUTPUT':
             prev_node = nodes[node.fanin[0]]  # Identifies sole fanin for output
-
-
             node.max_out_arrival = prev_node.max_out_arrival
 
         max_arrival_time, fastest_slew = 0.0, 0.0
@@ -567,7 +567,32 @@ def forward_sta(nodes, lut):
 
 
 def backward_sta(nodes, ckt_delay):
-    
+
+    required_arrival_time = 1.1 * ckt_delay  # Based on specs in document for 1.1 * delay
+
+    order = topological_order(nodes)
+    order.reverse()   # Reverses list order for backwards traversal
+
+    for gate_n in order:
+        node = nodes[gate_n]
+
+        if node.gate_type == 'OUTPUT':
+            node.required_time = required_arrival_time
+
+        max_arrival_time, fastest_slew = 0.0, 0.0
+
+        for fan_in in node.fanin:
+            prev_node = nodes[fan_in.name]
+
+            # Grab slack values from the LUT object
+            prev_node.required_time = min(node.required_time, prev_node.required_time)
+
+
+
+    # Now that all inputs have been checked and the required times determined, calculate the slack
+    for n in nodes.values():
+        n.slack = n.required_time - n.max_out_arrival
+
 
 
 def parse_bench(file, lut=None):
@@ -720,7 +745,7 @@ def parse_bench(file, lut=None):
 
             # Check all intputs for that gate
             for fan_in in gate.fanin:
-                fanin_n.append(nodes[fan_in])  # Grabs the object of 
+                fanin_n.append(nodes[fan_in.name])  # Grabs the object of 
             
             print(f'fanin nodes : {fanin_n}')
 
@@ -731,7 +756,7 @@ def parse_bench(file, lut=None):
         path.append(gate.name) # Add INPUT node
         path.reverse()         # Use to make sure that the critical path is read from INPUT -> OUTPUT 
 
-        write_ckt_traversal(inputs, outputs, gate_counter, nodes, path, output_file=f'ckt_traversal_{filename}.txt')
+        write_ckt_traversal(inputs, outputs, delay, nodes, path, output_file=f'ckt_traversal_{filename}.txt')
 
 
 
