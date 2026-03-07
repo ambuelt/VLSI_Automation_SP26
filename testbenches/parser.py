@@ -41,7 +41,8 @@ class Node:
         self.Tau_out = 0.0         # Resulting output slew
 
         self.slack = 0.0
-        self.required_time = 0.0
+        self.required_time = float('inf')
+        self.cell_delays = {}
 
 class LUT:
     def __init__(self):
@@ -296,6 +297,8 @@ def connect_inputs(gate_connections, nodes: dict):
         for w in input_w:
             input = w.strip()
             input_node = ckt_wires[input]
+            #print(f'\ninput_node : {input_node.name}\n')
+            #print(f'\ngate_tau_out : {input_node.Tau_out}\n')
 
             # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
             gate_node.fanin.append(input_node)   # Input -> Node
@@ -322,20 +325,21 @@ def connect_outputs(output_wires, nodes: dict):
 
         output_name = f'OUTPUT-{output}'
 
-        if output_name not in nodes:
-            nodes[output_name] = Node(output_name, 'OUTPUT')
-            output_node = nodes[output_name]
-        else:
-            output_node = nodes[output_name]
+        #if output_name not in nodes:
+        #    nodes[output_name] = Node(output_name, 'OUTPUT')
+        #    output_node = nodes[output_name]
+        #else:
+        output_node = nodes[output_name]
 
         for node in nodes.values():
+
+            if node.gate_type == 'OUTPUT':
+                continue
 
             # If output is only connected to a number, replace it with OUTPUT-that number
             if node.name.endswith(f'-{output}'):
                 #output_name = f'OUTPUT-{output}'
                 #output_node = Node(output_name, 'OUTPUT') # Creates new OUTPUT node type
-
-                #output_node.Cload = 4 * LUT.full_cell['INVx1']['input_cap']
                 
                 # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
                 node.fanout.append(output_node) # Node -> Output
@@ -369,7 +373,7 @@ def write_ckt_output(ckt_inputs, ckt_outputs, gate_counter, nodes, output_file='
         
         # Iterate through all node values
         for node in nodes.values():
-            if not (node.gate_type == 'INPUT'):
+            if not ((node.gate_type == 'INPUT') or (node.gate_type == 'OUTPUT')):
                 fanout_values = []
 
                 # Iterate through all fanout values
@@ -407,17 +411,17 @@ def write_ckt_traversal(ckt_inputs, ckt_outputs, ckt_delay, nodes, path, output_
 
     # Open output circuit file for writing line by line
     with open(output_file, 'w') as ckt_file:
-        ckt_file.write(f'Circuit delay: {ckt_delay} ps\n')
+        ckt_file.write(f'Circuit delay: {ckt_delay * 1000:.5f} ps\n')
 
         # Fanout of specific gates
         ckt_file.write('\nGate slacks:\n')
 
         # Iterate through all node values and Write all node names and output slack at each node
         for node in nodes.values():
-            ckt_file.write(f'{node.name}: {node.max_out_arrival} ps\n')
+            ckt_file.write(f'{node.name}: {node.slack * 1000:.5f} ps\n')
 
         ckt_file.write(f'\nCritical path:\n')
-        ckt_file.write(', '.join(path))
+        ckt_file.write(f'\n' + ', '.join(path) + '\n')
 
 
 
@@ -462,56 +466,74 @@ def interpolate_arrays(slew_row, cap_col, xvals, yvals, array_2d_vals):
         x = max(0, min(x, len(xvals)-2))
         y = max(0, min(y, len(yvals)-2))
 
-        #print(f'x : {x}')
-        #print(f'y : {y}')
+        print(f'\nx : {x}')
+        print(f'y : {y}')
 
         slew1, slew2   = xvals[x], xvals[x+1]
         #cap1, cap2     = xvals[x], xvals[x+1]
         #slew1, slew2   = yvals[y], yvals[y+1]
         cap1, cap2     = yvals[y], yvals[y+1]
 
+        print(f'slews : {slew1}   {slew2}')
+        print(f'caps  : {cap1}    {cap2}')
+
         v11 = array_2d_vals[x][y]
         v12 = array_2d_vals[x][y+1]
         v21 = array_2d_vals[x+1][y]
         v22 = array_2d_vals[x+1][y+1]
 
+        print(f'v11 : {v11}')
+        print(f'v12 : {v12}')
+        print(f'v21 : {v21}')
+        print(f'v22 : {v22}')
+
+        print(f'cap2 {cap2}   cap_col {cap_col}   to {cap2 - cap_col}')
+        print(f'slew2 {slew2}   slew_row {slew_row}   to {slew2 - slew_row}')
+
+        print(f'cap_col {cap_col}   cap1 {cap1}   to {cap_col - cap1}')
+        print(f'slew_row {slew_row}   slew1 {slew1}   to {slew_row - slew1}\n')
+
         numerator = (v11 * (cap2 - cap_col)*(slew2 - slew_row)) + (v12 * (cap_col - cap1)*(slew2 - slew_row)) + (v21 * (cap2 - cap_col)*(slew_row - slew1)) + (v22 * (cap_col - cap1)*(slew_row - slew1))
         denominator = (cap2 - cap1) * (slew2 - slew1)
 
+
         interpolated_value = numerator / denominator
+        print(interpolated_value)
+
         return interpolated_value
 
 
 def topological_order(nodes):
     # Used geeksforgeeks as baseline for topological sort (https://www.geeksforgeeks.org/dsa/topological-sorting-indegree-based-solution/)
-    n = len(nodes)
     gate_order = []
     indegree = {}
     queue = deque()
 
     # Compute indegrees for each node
     for node in nodes.values():
+        print(f'node names : {node.name}')
         indegree[node.name] = len(node.fanin)
+
         if indegree[node.name] == 0:
             queue.append(node)
 
+
+    print(f'idegrees : {indegree[node.name]}')
     print(f'queue : {queue}')
-            
-    # Add all nodes with indegree 0 into the queue
-    #for node in nodes.values():
-    #    if indegree[node.name] == 0:
-    #        queue.append(node)
 
     # Kahn’s Algorithm
     while queue:
         node = queue.popleft()       # Pop the first node on the queue
-        print(f'node : {node}')
         gate_order.append(node)  # Add node to visited nodes in the gate order
+        print(f'gate order : {node.name}')
 
         # Check all connected nodes via the fanout
         for next_node in node.fanout:
             #print(f'indegree : {indegree}')
             indegree[next_node.name] -= 1 # Subtract the indegree of next_node since others were processed
+
+            print(f'next_node : {next_node.name}')
+            print(f'idegrees : {indegree[next_node.name]}')
 
             # If next_node is connected to previous node
             if indegree[next_node.name] == 0:
@@ -523,19 +545,33 @@ def topological_order(nodes):
 def forward_sta(nodes, lut):
 
     order = topological_order(nodes)
-    print(f'order : {order}')
+    print(f'\norder : {order}')
 
     for gate in order:
         node = nodes[gate.name]
 
+        print(f'\n\nnode {vars(node)}\n\n')
+
+        if node.gate_type == 'INPUT':
+            continue
+
         if node.gate_type == 'OUTPUT':
             prev_node = node.fanin[0]  # Identifies sole fanin for output
             node.max_out_arrival = prev_node.max_out_arrival
+            node.inp_arrival.append(node.max_out_arrival)
+            node.outp_arrival.append(node.max_out_arrival)
+
+            print(f'node : {node.name}')
+            print(f'node : {node.max_out_arrival}')
+            print(f'\n\nnode {vars(node)}\n\n')
+            continue
 
         max_arrival_time, fastest_slew = 0.0, 0.0
 
         for fan_in in node.fanin:
             prev_node = nodes[fan_in.name]
+
+            print(f'prev_node {vars(prev_node)}\n')
 
             if node.gate_type == 'BUFF':
                     gate_name = 'BUF_X1'
@@ -549,6 +585,7 @@ def forward_sta(nodes, lut):
 
             # Calculate the input arrival of an input of the current gate from the output arrival of the previous gate
             input_arrival = prev_node.max_out_arrival
+            node.inp_arrival.append(input_arrival)
 
             # Grab values from the LUT object
             slew_array = lut.full_cell[gate_name]['index_1']
@@ -556,12 +593,25 @@ def forward_sta(nodes, lut):
             gate_delay_array = lut.full_cell[gate_name]['delays']
             gate_slew_array = lut.full_cell[gate_name]['slews']
 
+            print(f'delays : {gate_delay_array}')
+            print(f'slews : {gate_slew_array}')
+
             # Perform interpolation calculations
             gate_delay = interpolate_arrays(tau_in, node.Cload, slew_array, cap_array, gate_delay_array)
+
             gate_slew  = interpolate_arrays(tau_in, node.Cload, slew_array, cap_array, gate_slew_array)
 
             # Determine a_out = a_in + delay
             a_out = input_arrival + gate_delay
+
+            node.cell_delays[fan_in.name] = gate_delay
+
+            #print(f'cell_delay : {node.cell_delays}')
+
+            node.outp_arrival.append(a_out)
+            print(f'a_out : {a_out}')
+            print(f'delay : {gate_delay}')
+            print(f'input_arrival : {input_arrival}')
 
             # Determine a_out = max(a_in + delay)
             # Check to for each input to see which gives the max a_out
@@ -569,9 +619,22 @@ def forward_sta(nodes, lut):
                 max_arrival_time = a_out
                 fastest_slew = gate_slew
 
+            print(f'max_arrival_time : {max_arrival_time}')
+            print(f'fastest_slew : {fastest_slew}')
+            print(f'\nfanin {fan_in.name}\n\n')
+
+        print(f'\n\nnode {node.name}\n\n')
+
         # Now that all inputs have been checked and the max determined
         node.max_out_arrival = max_arrival_time
         node.Tau_out = fastest_slew
+
+        print(f'\n\nnode {vars(node)}\n\n')
+        print(f'cell_delay : {node.cell_delays}')
+
+
+
+
 
 
 def backward_sta(nodes, ckt_delay):
@@ -584,22 +647,36 @@ def backward_sta(nodes, ckt_delay):
     for gate in order:
         node = nodes[gate.name]
 
+        print(f'\n\nnode name backwards {gate.name}\n\n')
+        print(f'\n\nnode  backwards {vars(node)}\n\n')
+
         if node.gate_type == 'OUTPUT':
             node.required_time = required_arrival_time
-
-        max_arrival_time, fastest_slew = 0.0, 0.0
 
         for fan_in in node.fanin:
             prev_node = nodes[fan_in.name]
 
+            cell_delay = node.cell_delays.get(fan_in.name, 0.0)
+
+            node_req = node.required_time - cell_delay
+
             # Grab slack values from the LUT object
-            prev_node.required_time = min(node.required_time, prev_node.required_time)
+            #prev_node.required_time = min(node.required_time, prev_node.required_time)
+            prev_node.required_time = min(node_req, prev_node.required_time)
 
+            print(f'prev required : {prev_node.required_time}')
+            print(f'curr required : {node.required_time}')
 
+            print(f'\n\nnode {vars(node)}\n\n')
 
     # Now that all inputs have been checked and the required times determined, calculate the slack
     for n in nodes.values():
         n.slack = n.required_time - n.max_out_arrival
+        
+        print(f'node :: {n.name}')
+        print(f'slack :: {n.slack}')
+
+    #exit(1)
 
 
 
@@ -646,13 +723,14 @@ def parse_bench(file, lut=None):
                 output_wire = re.findall(r'\((.*?)\)', line)[0]
                 #print(f'output_wire {output_wire}')
                 outputs.append(output_wire)
-                output_name = f'OUTPUT-{input_wire}'
+                output_name = f'OUTPUT-{output_wire}'
+                print(output_name)
 
-                #if output_name not in nodes:
-                #    nodes[output_name] = Node(output_name, 'OUTPUT')
-                #    output_node = nodes[output_name]
-                #else:
-                #    output_node = nodes[output_name]
+                if output_name not in nodes:
+                    nodes[output_name] = Node(output_name, 'OUTPUT')
+                    output_node = nodes[output_name]
+                else:
+                    output_node = nodes[output_name]
 
             # When node is not a primary input/output
             elif ('=') in line:
@@ -683,35 +761,10 @@ def parse_bench(file, lut=None):
 
                 # Connect gate inputs but will not fully connect them since gates come up later and I don't want to assign them at the wrong time by accident
                 gate_connections.append((gate_name, output_wire_name, input_wires))
-                #connect_inputs(input_wires, inputs, node, nodes)
-                #print(f'\nafter connected input node name {vars(node)}\n')
 
             else:
                 continue # Information not important for netlist creation
     
-    
-    #ckt_wires = {}
-#
-    #for n in nodes.values():
-    #    wire = n.name.split('-')[-1]
-    #    ckt_wires[wire] = n
-#
-    ## Checks all inputs for that node against the node values to determine where they are in circuit
-    #for gate_n, output_w, input_w in gate_connections:
-#
-    #    gate_node = nodes[gate_n]
-    #    #print(f'\ngate_node : {gate_node.name}\n')
-#
-    #    for w in input_w:
-    #        input = w.strip()
-    #        input_node = ckt_wires[input]
-#
-    #        # Add all fanin and fanouts to circuit - need to use node.name otherwise it will add the Node object and not a string (made issues in printing)
-    #        gate_node.fanin.append(input_node.name)   # Input -> Node
-    #        input_node.fanout.append(gate_node.name)  # Input <- Node
-#
-    #        #print(f'\nafter connected input node name {vars(gate_node)}\n')
-    #        #print(f'\nafter connected input node name {vars(input_node)}\n')
 
     connect_inputs(gate_connections, nodes)
     
@@ -723,12 +776,19 @@ def parse_bench(file, lut=None):
     output_filename = f'ckt_details_{filename}.txt'
     write_ckt_output(inputs, outputs, gate_counter, nodes, output_filename)
 
+    
     ## START STA ##
     if lut is not None:
 
         compute_cload(nodes, lut)
 
+        #for n in nodes.values():
+        #    print(f'\nname : {n.name}')
+        #    print(f'tau_out : {n.Tau_out}')
+        #    print(f'Cload : {n.Cload}')
+
         forward_sta(nodes, lut)
+
 
         # Compute Total Circuit Delay
         delay = 0.0
@@ -755,7 +815,7 @@ def parse_bench(file, lut=None):
             for fan_in in gate.fanin:
                 fanin_n.append(nodes[fan_in.name])  # Grabs the object of 
             
-            print(f'fanin nodes : {fanin_n}')
+            #print(f'fanin nodes : {fanin_n}')
 
             path.append(gate.name)
             gate = min(fanin_n, key=lambda in_node: in_node.slack)
