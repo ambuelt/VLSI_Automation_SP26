@@ -4,16 +4,6 @@
 
 Your objective is to design tapeout-ready ASICs based on the given problem specifications in the .yaml specification file.
 
-Your README must allow the instructor/grader to reproduce your results.
-It must include:
-● Setup instructions (dependencies, environment)
-● Exact commands to run the system
-● Input/output description
-● Expected results (for verification)
-● Brief workflow description
-● How to run the hidden testcases
-
-
 ### Setup Instructions:
 Install dependencies for Python packages used:
 
