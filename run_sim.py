@@ -7,8 +7,8 @@ def run_sim():
         "iverilog",
         "-o",
         "sim.out",
-        "rtl/design.v",
-        "tb/tb.v"
+        "rtl_code/seq_detector_0011.v",
+        "testbench_code/seq_detector_0011_tb.v"
     ]
     
     subprocess.run(cmd)
@@ -20,6 +20,8 @@ def run_sim():
 
     return result.stdout.decode()
 
+
+# /OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad
 
 if __name__ == "__main__":
     print(run_sim())
