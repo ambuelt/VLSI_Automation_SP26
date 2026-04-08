@@ -1,4 +1,4 @@
-# VLSI_Automation_SP26
+# VLSI_Automation_SP26 - ASU Spec2Tapeout ICLAD 2025 Problem
 Repository to hold mini project assignments for EEE598 - VLSI Automation class
 
 Your README must allow the instructor/grader to reproduce your results.
@@ -10,13 +10,7 @@ It must include:
 ● Brief workflow description
 ● How to run the hidden testcases
 
-# ASU Spec2Tapeout ICLAD 2025 Hackathon Problems
-
-
 ## Infrastructure setup
-
-### SLM category: 
-The prerequisites are iVerilog and OpenROAD-flow-scripts that should be available on your laptops. For SLM problems, you will not be evaluated on hidden testcases!
 
 ### LLM category:
 Solving these problems requires the Docker image already available in your GCP VM instance. You can run the docker image as follows to create an environment that has OpenROAD-flow-scripts and iVerilog already installed:
@@ -33,7 +27,7 @@ Inside the docker container, you will find this repository already cloned and av
 /workspace/iclad_hackathon/ICLAD-Hackathon-2025/problem-categories
 ```
 
-## Directory Structure
+## Our Directory Structure
 
 ```plaintext
 ASU‑Spec2Tapeout‑ICLAD25‑Hackathon/
