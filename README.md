@@ -138,7 +138,7 @@ Spec -> RTL/Testbench -> iVerilog Synthesis -> OpenROAD (Physical Design) -> Tap
 5. If iVerilog simulation fails
     - Debug and regenerate RTL
     - If iVerilog loops 10 times, exit loop and end agent
-6. If successful, write successful_run.txt and move onto OpenROAD *Coming soo*
+6. If successful, write successful_run.txt and move onto OpenROAD *Coming soon*
 
 
 ## Evaluation setup - THE FOLLOWING WILL BE EDITED COME PHASE 3 SO WE THOUGHT TO INCLUDE IT NOW EVEN THOUGH ITS NOT HOW IT CURRENTLY RUNS!
