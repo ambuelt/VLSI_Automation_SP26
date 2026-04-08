@@ -58,6 +58,13 @@ python3 run_codex.py
 ```plaintext
 Mini_Project_2/
 ├── README.md
+├── run_codex.py
+│   └── Acts as main agent script and will be used to run Codex CLI agent and run_sim.py
+|
+├── AGENTS.md
+│   └── Acts as the agent architecture and creates the sgent feedback loop
+|
+|
 ├── Automated_Run/
 │   ├── iteration_#.logs of automated run_codex.py script
 |   ├── successful_run.txt states during which iteration the agent was successful (existance used as an indicator to start the OpenROAD process)
@@ -76,9 +83,6 @@ Mini_Project_2/
 │           Each YAML file typically includes clock, module interface, and expected behavior.
 │   ├── main.py, test.py, and tools.py are from old implmenetation but do not want to deleted yet in case it will be useful
 │
-├── solutions/
-
-
 
 ```
 
