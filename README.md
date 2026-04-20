@@ -57,7 +57,7 @@ python3 main_parser.py --read_ckt b15.bench --read_nldm sample_NLDM.lib
 |Filename/Foldername:              |         Description:  |
 |           :---                   |           :---        |
 |old_code folder                   |        - stores the file that runs the old code submission for this Project               |
-|code_outputs folder               |        - stores the files generated from code output as run on our end since there seemed to be differences between the graders and our outputs when running our old code file (critical paths were generated differently for b15 for some reason              |
+|code_outputs folder               |        - stores the files generated from code output as run on our end since there seemed to be differences between the graders and our outputs when running our old code file *(critical paths were generated differently for b15 for some reason)*              |
 |           :---                   |           :---        |
 |.gitignore                        |        - automatically generated when making the repository               |
 |EECAD Remote Access Instructions  |        - Given in assignment files to test code on eecad machines         |
