@@ -47,19 +47,19 @@ python3 main_parser.py --read_ckt b15.bench --read_nldm sample_NLDM.lib
 |Node.py                    |                - Creates a class NODE to represent the different gates in the circuit |
 |requirements.txt           |                - Includes all python packages to install for code (some packages used should automatically be built into python 3.7) |
 |c17.bench                  |                - Smallest circuit test bench |
-|c7552.bench                |                - mid circuit test bench      |
+|c7552.bench                |                - Mid circuit test bench      |
 |b15.bench                  |                - Largest circuit test bench  |
 |sample_NLDM.lib            |                - Library file holding the different types of cells and their delay, cap, and slew values |
   
 <br>
 
 *All of the following is not needed for running this assignment in terminal*
-|Filename/Foldername:              |         Description:  |
+|Foldername:              |         Description:  |
 |           :---                   |           :---        |
-|old_code folder                   |        - stores the file that runs the old code submission for this Project               |
-|code_outputs folder               |        - stores the files generated from code output as run on our end since there seemed to be differences between the graders and our outputs when running our old code file *(critical paths were generated differently for b15 for some reason)*              |
-|           :---                   |           :---        |
-|.gitignore                        |        - automatically generated when making the repository               |
+|old_code folder                   |        - Stores the file that runs the old code submission for this Project               |
+|code_outputs folder               |        - Stores the files generated from code output as run on our end since there seemed to be differences between the graders and our outputs when running our old code file *(critical paths were generated differently for b15 for some reason)*              |
+**|Filename:              |         Description:  |**
+|.gitignore                        |        - Automatically generated when making the repository               |
 |EECAD Remote Access Instructions  |        - Given in assignment files to test code on eecad machines         |
 |ProjectDescription                |        - Given in assignment files to provide mini project 1 instructions |
 |Rubrics                           |        - Given in assignment files to show how grading will be done       |
