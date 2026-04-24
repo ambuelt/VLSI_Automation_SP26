@@ -1,24 +1,40 @@
 # File taken from Canvas Agent Instructions
 
 import subprocess
+from pathlib import Path
 
-def run_oroad():
+ROOT = Path(__file__).resolve().parent
+
+def run_codex():
+    # Add prompt to give to Codex AGENTS.md initial prompting
+    prompt = f"""
+    Read the AGENTS_physical.md file and follow all listed instructions.
+    """
+
     cmd = [
-        "iverilog",
-        "-o",
-        "my_sim.out",
-        "rtl/design.v",
-        "tb/iclad_seq_detector_tb.v"
+        "codex",
+        "exec",
+        "--skip-git-repo-check",
+        "--cd",
+        str(ROOT),
+        "--dangerously-bypass-approvals-and-sandbox",
+        prompt
     ]
     
-    subprocess.run(cmd)
+    result = subprocess.run(cmd,
+                   text=True,
+                   capture_output=True)
+    
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr)
 
-    result = subprocess.run(
-        ["vvp", "my_sim.out"],
-        capture_output=True
-    )
 
-    return result.stdout.decode()
+
+if __name__ == "__main__":
+    raise SystemExit(run_codex())
+    
+
 
 
 if __name__ == "__main__":
