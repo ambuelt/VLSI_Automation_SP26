@@ -38,7 +38,7 @@ Inside the docker container, you will find this repository already cloned and av
 
 ## Run the System:
 
-Before runninng the code place the desired *.yaml file in the __[location]___
+Before runninng the code place the desired *.yaml file in the eda_agent folder. MAKE SURE THAT ONLY 1 .YAML FILE IS IN THERE AT A TIME OTHERWISE IT WILL TRY TO RUN THEM ALL AT ONCE AND THE AGENT WONT PERFORM WELL!
 
 To run the **Finalized** version of the code run the following command in the WSB Ubuntu terminal:
 
