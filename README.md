@@ -184,7 +184,9 @@ python3 evaluate_verilog.py --verilog ../rtl_code/{module_name}.v --problem 1 --
 
 This will check the metrics of your generated layouts using the specification jsons provided. An example command is provided below
 
-*This part will be updated in the final version of the code - Phase 3*
+```
+python3 evaluate_openroad.py --odb ../solutions/visible/p1/6_final.odb --sdc ../solutions/visible/p1/6_final.sdc --flow_root ../../OpenROAD-flow-scripts --problem 1
+```
 
 ## Running Hidden Testcases - THE FOLLOWING WILL BE EDITED COME PHASE 3 SO WE THOUGHT TO INCLUDE IT NOW EVEN THOUGH ITS NOT HOW IT CURRENTLY RUNS!
 
