@@ -3,6 +3,7 @@
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 
@@ -68,6 +69,7 @@ def run_codex():
     spec_path = discover_spec_file()
     module_name = discover_module_name(spec_path)
     clean_previous_run(module_name)
+    start_time = time.time()
 
     prompt = """
     Read the AGENTS.md file and follow all listed instructions.
@@ -84,10 +86,14 @@ def run_codex():
     ]
 
     result = subprocess.run(cmd, text=True, capture_output=True)
+    elapsed_time = time.time() - start_time
 
     print(result.stdout)
     if result.stderr:
         print(result.stderr)
+    print(f"run_codex runtime: {elapsed_time:.2f} seconds")
+
+    return result.returncode
 
 
 if __name__ == "__main__":

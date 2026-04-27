@@ -25,3 +25,6 @@ Steps:
 7. Create a file called successful_run.txt if simulation all worked, and write the exact text 'SUCCESSFUL RTL DESIGN CREATED AT ITERATION {iteration_number}' into successful_run.txt.
 8. If RTL and Testbench passed iverilog without failure, run the Agent_physical.md file and follow all listed instructions.
 9. If Agent_physical.md exhausts its allowed physical-only iterations at the fixed YAML clock target and still cannot meet timing or physical success criteria, return to the RTL loop. Improve the RTL or microarchitecture for timing, rerun functional verification, and then rerun the physical flow from a clean state. Do not relax the YAML clock target to avoid this escalation.
+10. Do not stop the overall flow because the current RTL is believed to be the "best design", "best available design", "good enough", or similar subjective wording. Those are not valid stop conditions.
+11. If physical violations still remain, continue the documented loop, escalate between physical closure and RTL redesign as required, and only stop when the design passes all required checks or the explicit iteration budget is exhausted.
+12. If the full allowed RTL-plus-physical iteration budget is exhausted and the design still does not pass, create `unsuccessful_run.txt` and clearly state that the run failed with remaining violations. Do not report success in that case.

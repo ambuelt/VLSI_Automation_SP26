@@ -34,6 +34,14 @@ For each iteration:
 If the targeted checks pass, stop and report success.
 If 5 iterations are exhausted, stop the physical-only loop, report the best available result plus remaining violations, and escalate back to the RTL agent for microarchitectural redesign at the same YAML clock target.
 
+Mandatory loop rule:
+- if any targeted violation remains after an iteration, the agent must not stop at that iteration
+- instead, it must either begin the next physical iteration immediately with a bounded physical fix, or, if the physical iteration budget has been exhausted, explicitly escalate back to RTL redesign
+- writing an iteration summary for a failing iteration is not a stop condition by itself
+- completion of OpenROAD, routing, GDS generation, or summary writing does not count as success while targeted violations remain
+- the agent must not stop because it believes the current RTL is the "best design", "best available design", "good enough", or because a further improvement seems unlikely
+- if violations remain, the only valid outcomes are another physical iteration, escalation back to RTL redesign, or explicit failure after the documented iteration budget is exhausted
+
 ---
 
 ## Targeted Checks
@@ -235,6 +243,10 @@ After the ORFS run, copy back all available module-specific outputs before the c
 - `reports/sky130hd/{module_name}/base/*` into `output_physical/{module_name}/reports/`
 - `3_place.odb`, `4_cts.odb`, and `5_route.odb` into `output_physical/{module_name}/odb/`
 - `6_final.gds` into the flat retained path `output_physical/{module_name}/{module_name}.gds`
+- `6_final.odb`, `6_final.gds`, and `6_final.sdc` into a top-level flat folder at `results/` using module-specific names:
+  - `results/{module_name}.odb`
+  - `results/{module_name}.gds`
+  - `results/{module_name}.sdc`
 
 Use guarded `if [ -d ... ]` or `if [ -f ... ]` checks when copying back artifacts so failed iterations still preserve whatever partial results were produced.
 
@@ -250,6 +262,7 @@ After each iteration, inspect:
 Extract:
 - area
 - utilization
+- power
 - TNS
 - WNS / worst slack
 - fmax if reported
@@ -273,6 +286,11 @@ Completion requirement:
 ### 9. Apply bounded fixes
 
 If violations remain, modify only physical-flow inputs and rerun.
+
+Continuation rule:
+- after applying a bounded fix, immediately rerun the next physical iteration within the same overall flow
+- do not stop after reporting a failing intermediate iteration
+- do not exit the physical agent while violations remain unless the physical iteration budget has been exhausted and the agent is explicitly escalating back to RTL redesign
 
 Preferred fix order:
 1. if floorplan setup fails, add missing ORFS config fields such as `CORE_UTILIZATION`
@@ -301,11 +319,15 @@ Stop with success if:
 Stop the physical-only loop with escalation if:
 - 5 iterations are reached and violations remain
 
+Do not stop for any other reason while violations remain.
+Do not stop because the design is judged subjectively as the "best design" or because a later improvement attempt looks unlikely.
+
 On success or physical-loop exhaustion, write:
 - `output_physical/{module_name}/{module_name}_evaluation_summary.md`
 
 The summary must include:
 - final area
+- final power
 - final slack
 - remaining violations, if any
 - path to the retained CTS and routed `.odb` files
@@ -316,6 +338,7 @@ The summary must include:
 If physical-loop exhaustion occurs:
 - explicitly state that the design did not meet the fixed YAML clock target with physical-only fixes
 - instruct the top-level agent to return to RTL generation, preserve the same YAML clock target, and rerun functional plus physical verification from a clean state
+- do not claim success for the current run
 
 ---
 
@@ -336,6 +359,7 @@ If physical-loop exhaustion occurs:
 - retained CTS `.odb` file at `output_physical/{module_name}/odb/{module_name}_4_cts.odb`
 - retained routed `.odb` file at `output_physical/{module_name}/odb/{module_name}_5_route.odb`
 - retained final `.gds` file at `output_physical/{module_name}/{module_name}.gds`
+- flat final `.odb`, `.gds`, and `.sdc` copies at `results/{module_name}.odb`, `results/{module_name}.gds`, and `results/{module_name}.sdc`
 - logs in `output_physical/{module_name}/logs/`
 - reports in `output_physical/{module_name}/reports/`
 - SDC file at `output_physical/{module_name}/sdc/{module_name}.sdc`
