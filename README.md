@@ -197,6 +197,12 @@ This will check the metrics of your generated layouts using the specification js
 python3 evaluate_openroad.py --odb ../solutions/visible/p1/6_final.odb --sdc ../solutions/visible/p1/6_final.sdc --flow_root ../../OpenROAD-flow-scripts --problem 1
 ```
 
+What I think ours will look like command-wise:
+
+```
+python3 evaluate_openroad.py --odb ../output_physical/p7_final_output/6_final.odb --sdc ../output_physical/p7_final_output/6_final.sdc --flow_root ../../OpenROAD-flow-scripts --problem 1
+```
+
 ## Running Hidden Testcases - THE FOLLOWING WILL BE EDITED COME PHASE 3 SO WE THOUGHT TO INCLUDE IT NOW EVEN THOUGH ITS NOT HOW IT CURRENTLY RUNS!
 
 - Place hidden test case *.yaml in eda_agent folder
