@@ -173,7 +173,7 @@ PHYSICAL_AGENTS.md
 
 More specifics about the general agent workflow are described in the AGENTS.md and PHYSICAL_AGENTS.md files.
 
-## Evaluation setup - THE FOLLOWING WILL BE EDITED COME PHASE 3 SO WE THOUGHT TO INCLUDE IT NOW EVEN THOUGH ITS NOT HOW IT CURRENTLY RUNS!
+## Evaluation setup
 
 For each problem you must run two evaluations scripts
 
@@ -203,7 +203,7 @@ What I think ours will look like command-wise:
 python3 evaluate_openroad.py --odb ../output_physical/p7_final_output/6_final.odb --sdc ../output_physical/p7_final_output/6_final.sdc --flow_root ../../OpenROAD-flow-scripts --problem 1
 ```
 
-## Running Hidden Testcases - THE FOLLOWING WILL BE EDITED COME PHASE 3 SO WE THOUGHT TO INCLUDE IT NOW EVEN THOUGH ITS NOT HOW IT CURRENTLY RUNS!
+## Running Hidden Testcases
 
 - Place hidden test case *.yaml in eda_agent folder
 - Run python3 run_codex.py in the Ubuntu terminal
