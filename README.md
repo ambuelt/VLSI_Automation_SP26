@@ -28,6 +28,8 @@ docker run -it --rm \
   iclad_hackathon:latest bash
 ```
 
+Reference the ICLAD Hackathon repo for more information on getting the Docker container if unsuccessful at running Docker commands: https://github.com/ICLAD-Hackathon/ICLAD-Hackathon-2025
+
 Inside the docker container, you will find this repository already cloned and available to you in 
 
 ```
