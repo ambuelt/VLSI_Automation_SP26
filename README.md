@@ -120,10 +120,11 @@ Gives OpenROAD log output at iteration 2 in logs folder:
 
 ## Workflow Description:
 
-More specifics about the general agent workflow are described in the AGENTS.md and PHYSICAL_AGENTS.md file.
+The overall agentic workflow flows through the entire Spec2Tapeout design flow. Below gives high-level steps similar to the Figure flow diagrams provided in the final report and powerpoint.
 
 Spec -> RTL/Testbench -> iVerilog Synthesis -> OpenROAD (Physical Design) -> Tapeout Ready .odb and .sdc
 
+```
 AGENTS.md
 1. Agent reads *.yaml file for RTL and testbench specification
 2. Codex CLI generates RTL and corresponding testbench
@@ -133,7 +134,9 @@ AGENTS.md
     - Debug and regenerate RTL
     - If iVerilog loops 10 times, exit loop and end agent
 6. If successful, write successful_run.txt and move onto OpenROAD
+```
 
+```
 PHYSICAL_AGENTS.md
 1. Agent reads RTL file for specification
 2. Generates SDC constraints from the RTL
@@ -144,6 +147,9 @@ PHYSICAL_AGENTS.md
     - Debug and regenerate RTL
     - If iVerilog loops 5 times, exit loop and start Spec2RTL agent
 7. If successful, return .odb, .sdc, and RTL.v
+```
+
+More specifics about the general agent workflow are described in the AGENTS.md and PHYSICAL_AGENTS.md files.
 
 ## Evaluation setup - THE FOLLOWING WILL BE EDITED COME PHASE 3 SO WE THOUGHT TO INCLUDE IT NOW EVEN THOUGH ITS NOT HOW IT CURRENTLY RUNS!
 
@@ -169,4 +175,5 @@ This will check the metrics of your generated layouts using the specification js
 
 ## Running Hidden Testcases - THE FOLLOWING WILL BE EDITED COME PHASE 3 SO WE THOUGHT TO INCLUDE IT NOW EVEN THOUGH ITS NOT HOW IT CURRENTLY RUNS!
 
-*This part will be updated in the final version of the code - Phase 3*
+- Place hidden test case *.yaml in __[location]___
+- Run python3 run_codex.py in the Ubuntu terminal
