@@ -53,17 +53,30 @@ Mini_Project_2/
 ├── run_codex.py
 │   └── Acts as main agent script and will be used to run Codex CLI agent and run_sim.py
 |
+├── run_sim.py
+│   └── Evaluates the Spec2RTL generated RTL and testbench for functional correctness
+|
 ├── AGENTS.md
-│   └── Acts as the agent architecture and creates the sgent feedback loop
+│   └── Acts as the Spec2RTL agent architecture and creates the agent feedback loop
+├── PHYSICAL_AGENTS.md
+│   └── Acts as the RTL2Tapeout agent architecture and creates the agent feedback loop
 |
 |
-├── Automated_Run/
+|
+├── rtl_code/
 │   ├── iteration_#.logs of automated run_codex.py script
 |   ├── successful_run.txt states during which iteration the agent was successful (existance used as an indicator to start the OpenROAD process)
 |
-├── Manual_Run/
-│   ├── iteration_#.logs of manually entering into Codex agent
+├── testbench_code/
+│   ├── Contains all generated testbenches for visible problems
+│   ├── Contains all provided testbenches for visible problems from ICLAD Github
 │
+|
+├── logs/
+│   ├── iteration_#.logs of automated run_codex.py script
+|   ├── successful_run.txt states during which iteration the agent was successful (existance used as an indicator to start the OpenROAD process)
+|
+|
 ├── eda_agent/
 │   └── rtl/
 |       └── design.v - This is the RTL file generated during the manual Codex process
