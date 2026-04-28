@@ -1,0 +1,5 @@
+PASS: case 0 expected=96 observed=96
+PASS: case 1 expected=120 observed=120
+PASS: case 2 expected=-1 observed=-1
+PASS: case 3 expected=0 observed=0
+All 4 cases passed.
