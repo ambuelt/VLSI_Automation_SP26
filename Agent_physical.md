@@ -36,11 +36,15 @@ If 5 iterations are exhausted, stop the physical-only loop, report the best avai
 
 Mandatory loop rule:
 - if any targeted violation remains after an iteration, the agent must not stop at that iteration
-- instead, it must either begin the next physical iteration immediately with a bounded physical fix, or, if the physical iteration budget has been exhausted, explicitly escalate back to RTL redesign
+- instead, it must either begin the next physical iteration immediately with a bounded physical fix, or explicitly escalate back to RTL redesign as soon as the physical evidence shows the current RTL is the limiting factor
 - writing an iteration summary for a failing iteration is not a stop condition by itself
 - completion of OpenROAD, routing, GDS generation, or summary writing does not count as success while targeted violations remain
 - the agent must not stop because it believes the current RTL is the "best design", "best available design", "good enough", or because a further improvement seems unlikely
 - if violations remain, the only valid outcomes are another physical iteration, escalation back to RTL redesign, or explicit failure after the documented iteration budget is exhausted
+
+Early RTL-escalation rule:
+- do not wait for all 5 physical iterations if the current data already shows the design is microarchitecturally too slow for the fixed YAML clock target
+- escalate back to RTL redesign immediately once the failing behavior is clearly architectural rather than a tunable physical issue
 
 ---
 
@@ -161,6 +165,7 @@ Constraint rule:
 RTL escalation rule:
 - do not change the RTL during the bounded physical-only iterations
 - if all allowed physical iterations are exhausted and the design still fails timing at the fixed YAML clock, hand control back to the RTL agent to improve the design and restart the flow
+- if earlier physical evidence already makes it clear that bounded physical tuning is not the right lever, hand control back to the RTL agent before the 5-iteration limit
 
 ---
 
@@ -301,6 +306,19 @@ Preferred fix order:
 6. if routing violations or DRC remain, reduce utilization or tune other non-clock physical parameters conservatively
 7. if constraints are clearly malformed, repair the SDC
 
+Escalate to RTL redesign immediately instead of spending more physical-only iterations when one or more of these conditions is true:
+1. post-CTS timing is still strongly negative after repair, for example WNS is materially negative or setup TNS remains clearly nonzero after CTS repair
+2. route-stage timing repair requires large additional resizing or buffering and still leaves setup violations
+3. detailed route DRC count grows large during optimization, indicating the design is fighting both timing and routability at once
+4. physical tuning has already corrected congestion and legalization issues, but timing still misses because the logic depth is too high
+5. the current iteration shows only marginal improvement versus the prior failing iteration while preserving the same architectural critical path
+
+When early RTL escalation is chosen:
+- stop the current physical-only line of attack
+- write the iteration summary explaining why physical tuning is no longer the right lever
+- return to RTL redesign immediately at the same YAML clock target
+- after RTL redesign, rerun functional verification and then restart the physical flow from a clean state
+
 Do not:
 - hide violations by deleting reports
 - change the YAML clock target in SDC or `config.mk`
@@ -318,6 +336,7 @@ Stop with success if:
 
 Stop the physical-only loop with escalation if:
 - 5 iterations are reached and violations remain
+- or earlier physical evidence has already triggered the early RTL-escalation rule
 
 Do not stop for any other reason while violations remain.
 Do not stop because the design is judged subjectively as the "best design" or because a later improvement attempt looks unlikely.
