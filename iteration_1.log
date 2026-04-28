@@ -1,0 +1,2 @@
+/workspace/iclad_hackathon/testbench_code/fir_filter_tb.v:53: error: y_out Unable to assign to unresolved wires.
+1 error(s) during elaboration.
