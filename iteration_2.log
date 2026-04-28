@@ -1,1 +1,4 @@
-TB_PASS
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:126: error: Concatenation operand "((i)*('sd7))&(10'd1023)" has indefinite width.
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:131: error: Concatenation operand "((i)*('sd11))&(10'd1023)" has indefinite width.
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:132: error: Concatenation operand "((i)*('sd13))&(10'd1023)" has indefinite width.
+3 error(s) during elaboration.
