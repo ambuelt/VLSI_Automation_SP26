@@ -1,0 +1,170 @@
+{
+  "creator": "Yosys 0.64+post (git sha1 UNKNOWN-dirty, g++ 11.4.0-1ubuntu1~22.04.3 -fPIC -O3)",
+  "modules": {
+    "seq_detector_0011": {
+      "attributes": {
+        "top": "00000000000000000000000000000001",
+        "hdlname": "seq_detector_0011"
+      },
+      "ports": {
+        "clk": {
+          "direction": "input",
+          "bits": [ 2 ]
+        },
+        "reset": {
+          "direction": "input",
+          "bits": [ 3 ]
+        },
+        "data_in": {
+          "direction": "input",
+          "bits": [ 4 ]
+        },
+        "detected": {
+          "direction": "output",
+          "bits": [ 5 ]
+        }
+      },
+      "cells": {
+        "$auto$ff.cc:337:slice$5598": {
+          "hide_name": 1,
+          "type": "$sdff",
+          "parameters": {
+            "CLK_POLARITY": "00000000000000000000000000000001",
+            "SRST_POLARITY": "00000000000000000000000000000001",
+            "SRST_VALUE": "0",
+            "WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+          },
+          "port_directions": {
+            "CLK": "input",
+            "D": "input",
+            "Q": "output",
+            "SRST": "input"
+          },
+          "connections": {
+            "CLK": [ 2 ],
+            "D": [ 6 ],
+            "Q": [ 5 ],
+            "SRST": [ 3 ]
+          }
+        },
+        "$auto$ff.cc:337:slice$5599": {
+          "hide_name": 1,
+          "type": "$sdff",
+          "parameters": {
+            "CLK_POLARITY": "00000000000000000000000000000001",
+            "SRST_POLARITY": "00000000000000000000000000000001",
+            "SRST_VALUE": "000",
+            "WIDTH": "00000000000000000000000000000011"
+          },
+          "attributes": {
+          },
+          "port_directions": {
+            "CLK": "input",
+            "D": "input",
+            "Q": "output",
+            "SRST": "input"
+          },
+          "connections": {
+            "CLK": [ 2 ],
+            "D": [ 4, 7, 8 ],
+            "Q": [ 7, 8, 9 ],
+            "SRST": [ 3 ]
+          }
+        },
+        "$auto$ff.cc:337:slice$5600": {
+          "hide_name": 1,
+          "type": "$sdff",
+          "parameters": {
+            "CLK_POLARITY": "00000000000000000000000000000001",
+            "SRST_POLARITY": "00000000000000000000000000000001",
+            "SRST_VALUE": "0",
+            "WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+          },
+          "port_directions": {
+            "CLK": "input",
+            "D": "input",
+            "Q": "output",
+            "SRST": "input"
+          },
+          "connections": {
+            "CLK": [ 2 ],
+            "D": [ 10 ],
+            "Q": [ 6 ],
+            "SRST": [ 3 ]
+          }
+        },
+        "$eq$/OpenROAD-flow-scripts/flow/designs/src/seq_detector_0011/seq_detector_0011.v:18$5585": {
+          "hide_name": 1,
+          "type": "$eq",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000010",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 4, 7, 8, 9 ],
+            "B": [ "1", "1" ],
+            "Y": [ 10 ]
+          }
+        }
+      },
+      "netnames": {
+        "$eq$/OpenROAD-flow-scripts/flow/designs/src/seq_detector_0011/seq_detector_0011.v:18$5585_Y": {
+          "hide_name": 1,
+          "bits": [ 10 ],
+          "attributes": {
+          }
+        },
+        "clk": {
+          "hide_name": 0,
+          "bits": [ 2 ],
+          "attributes": {
+          }
+        },
+        "data_in": {
+          "hide_name": 0,
+          "bits": [ 4 ],
+          "attributes": {
+          }
+        },
+        "detected": {
+          "hide_name": 0,
+          "bits": [ 5 ],
+          "attributes": {
+          }
+        },
+        "match_d": {
+          "hide_name": 0,
+          "bits": [ 6 ],
+          "attributes": {
+          }
+        },
+        "reset": {
+          "hide_name": 0,
+          "bits": [ 3 ],
+          "attributes": {
+          }
+        },
+        "shift_reg": {
+          "hide_name": 0,
+          "bits": [ 7, 8, 9 ],
+          "attributes": {
+          }
+        }
+      }
+    }
+  }
+}

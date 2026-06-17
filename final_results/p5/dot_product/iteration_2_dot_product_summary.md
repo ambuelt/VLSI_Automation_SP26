@@ -1,0 +1,34 @@
+## Physical Iteration 2
+
+- Status: pass
+- Clock target: `4.5ns` from `eda_agent/p5.yaml`
+- Physical changes this iteration: restarted from clean state after RTL redesign, used `CORE_UTILIZATION = 55` and `PLACE_DENSITY_LB_ADDON = 0.15`
+- CTS completed successfully and met timing:
+  - setup TNS `0`
+  - hold TNS `0`
+  - setup violation count `0`
+  - hold violation count `0`
+- Global-route snapshot remained slightly negative but was treated as intermediate only:
+  - setup TNS `-0.0719047`
+  - setup violation count `2`
+- Final routed metrics closed cleanly:
+  - setup TNS `0`
+  - hold TNS `0`
+  - setup violation count `0`
+  - hold violation count `0`
+  - final worst slack `0.16ns`
+  - routed DRC `0`
+  - flow errors `0`
+- Final area/utilization:
+  - instance area `30523 um^2`
+  - utilization `38.4488%`
+- Final power:
+  - total power `0.030516 W`
+- Retained artifacts:
+  - `output_physical/dot_product/odb/dot_product_4_cts.odb`
+  - `output_physical/dot_product/odb/dot_product_5_route.odb`
+  - `output_physical/dot_product/dot_product.gds`
+  - `results/dot_product.odb`
+  - `results/dot_product.gds`
+  - `results/dot_product.sdc`
+- Result: pass at the unchanged YAML clock target after RTL redesign

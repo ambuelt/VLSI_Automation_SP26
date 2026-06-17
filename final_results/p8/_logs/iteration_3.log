@@ -1,0 +1,2 @@
+TB_PASS
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:147: $finish called at 210000 (1ps)

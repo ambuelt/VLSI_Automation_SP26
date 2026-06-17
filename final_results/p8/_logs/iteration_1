@@ -1,0 +1,5 @@
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:119: syntax error
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:119: error: Syntax error in task arguments.
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:120: syntax error
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:120: error: Syntax error in task arguments.
+/workspace/iclad_hackathon/testbench_code/fp16_multiplier_tb.v:120: error: Malformed statement
